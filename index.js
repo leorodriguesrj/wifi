@@ -5,6 +5,8 @@ const EventEmitter = require('events').EventEmitter;
 const exec = require('child_process').exec;
 const path = require('path');
 const unlinkSync = require('fs').unlinkSync;
+const pbkdf2 = require('crypto');
+const spawnSync = require('child_process').spawnSync;
 
 /*
     WPA_CLI commands
@@ -16,8 +18,6 @@ const WPA_CMD = {
     scanResult: 'SCAN_RESULTS',
     addNetwork: 'ADD_NETWORK',
     listNetwork: 'LIST_NETWORKS',
-    setSSID: 'SET_NETWORK :id ssid ":ssid"',
-    setPassword: 'SET_NETWORK :id psk ":password"',
     setNetwork: 'SET_NETWORK :id :key :value',
     status: 'STATUS',
     enableNetwork: 'ENABLE_NETWORK :id',
@@ -206,7 +206,7 @@ class WpaCli extends EventEmitter {
                 });
             });
         });
-        
+
         this.scanPromise.then(() => {
             this.scanResolve = null;
             this.scanReject = null;
@@ -342,26 +342,66 @@ class WpaCli extends EventEmitter {
     }
 
     /**
+     * set network variable
+     * 
+     * @param {Number} networkId network id recieved from list networks
+     * @param {String} variable variable to set
+     * @param {String} value value for the variable
+     */
+    setNetworkVariable(networkId, variable, value) {
+        return this.sendCmd(WPA_CMD.setNetwork.replace(':id', networkId).replace(':key', variable).replace(':value', value));
+    }
+
+    /**
      * set network ssid
-     * @param {String} networkId network id recieved from list networks
-     * @param {String} add ssid to network
+     * @param {Number} networkId network id recieved from list networks
+     * @param {String} ssid ssid to network
      */
     setNetworkSSID(networkId, ssid) {
-        return this.sendCmd(WPA_CMD.setSSID.replace(':id', networkId).replace(/:ssid/, ssid));
+        return this.setNetworkVariable(networkId, 'ssid', `"${ssid}"`);
     }
 
     /**
      * set network pre-shared key
-     * @param {String} networkId networkId network id recieved from list networks
+     * @param {Number} networkId networkId network id recieved from list networks
      * @param {String} preSharedKey  pre-shared key
      */
-    setNetworkPreSharedKey(networkId, preSharedKey) {
-        return this.sendCmd(WPA_CMD.setPassword.replace(':id', networkId).replace(/:password/, preSharedKey));
+    setNetworkPreSharedKey(networkId, preSharedKey, ssid) {
+        return new Promise((resolve, reject) => {
+            pbkdf2(preSharedKey, ssid, 4096, 32, 'sha1', (err, derivedKey) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(derivedKey.toString('hex'));
+                }
+            });
+        }).then((psk) => {
+            return this.setNetworkVariable(networkId, 'psk', psk);
+        });
+    }
+
+    /**
+     * set network identity
+     * @param {Number} networkId network id recieved from list networks
+     * @param {String} identity identity string for EAP
+     */
+    setNetworkIdentity(networkId, identity) {
+        return this.setNetworkVariable(networkId, 'identity', `"${identity}"`);
+    }
+
+    /**
+     * set network password
+     * @param {Number} networkId network id recieved from list networks
+     * @param {String} password password string for EAP
+     */
+    setNetworkPassword(networkId, password) {
+        let hash = spawnSync('openssl md4', { input: Buffer.from(password, 'utf16le') }).stdout.toString().trim();
+        return this.setNetworkVariable(networkId, 'password', `hash:${hash}`);
     }
 
     /**
      * enable configured network
-     * @param  {string} networkId networkId network id recieved from list networks
+     * @param  {Number} networkId networkId network id recieved from list networks
      */
     enableNetwork(networkId) {
         return this.sendCmd(WPA_CMD.enableNetwork.replace(/:id/, networkId));
@@ -369,7 +409,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * select network to connect
-     * @param  {String} networkId networkId network id recieved from list networks
+     * @param  {Number} networkId networkId network id recieved from list networks
      */
     selectNetwork(networkId) {
         return this.sendCmd(WPA_CMD.selectNetwork.replace(/:id/, networkId));
