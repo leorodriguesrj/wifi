@@ -1,14 +1,16 @@
 'use strict';
-var assert = require('chai').assert;
+/* eslint-env node, mocha */
+
 require('chai').should();
 const WpaCli = require('../');
-describe('WpaCli P2P Tests', function() {
 
-    describe('Search for peer', function() {
-        var wpa = new WpaCli('p2p0');
-        it('should find peers on network', function(done) {
-            wpa.once('ready', function() {
-                wpa.once('peer_found', function(peer) {
+describe('WpaCli P2P Tests', function () {
+
+    describe('Search for peer', function () {
+        let wpa = new WpaCli('p2p0');
+        it('should find peers on network', function (done) {
+            wpa.once('ready', function () {
+                wpa.once('peer_found', function (peer) {
                     peer.should.be.a('object');
                     done();
                 }).peerFind();
@@ -19,15 +21,15 @@ describe('WpaCli P2P Tests', function() {
         }).timeout(5000);
 
     });
-    describe('connect to peer', function() {
-        var wpa = new WpaCli('p2p0');
-        it('should connect to peer', function(done) {
+    describe('connect to peer', function () {
+        let wpa = new WpaCli('p2p0');
+        it('should connect to peer', function (done) {
             // wpa.on('raw_msg', function(msg) {
             //     console.log(msg);
             // });
-            wpa.once('ready', function() {
-                wpa.once('peer_found', function(peer) {
-                    wpa.once('peer_connected', function() {
+            wpa.once('ready', function () {
+                wpa.once('peer_found', function (peer) {
+                    wpa.once('peer_connected', function () {
                         done();
                     });
                     wpa.peerConnectPBC(peer.deviceAddress, false);

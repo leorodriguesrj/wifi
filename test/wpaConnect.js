@@ -1,14 +1,15 @@
 'use strict';
-var assert = require('chai').assert;
+/* eslint-env node, mocha */
+
+const assert = require('chai').assert;
 require('chai').should();
 const WpaCli = require('../');
-var wpa = new WpaCli('wlan0');
+let wpa = new WpaCli('wlan0');
+
 describe('WpaCli AP connection Tests', function() {
     describe('connect to wpa', function() {
         it('should emit an connect to AP', function(done) {
-
-
-            var errTimeout = setTimeout(function() {
+            let errTimeout = setTimeout(function() {
                 assert(false, 'Event never fired');
                 done();
             }, 1000);
@@ -34,9 +35,7 @@ describe('WpaCli AP connection Tests', function() {
 describe('WpaCli AP disconnection Tests', function() {
     describe('connect to wpa', function() {
         it('should emit an disconnect from AP', function(done) {
-
-
-            var errTimeout = setTimeout(function() {
+            let errTimeout = setTimeout(function() {
                 assert(false, 'Event never fired');
                 done();
             }, 1000);
