@@ -3,7 +3,9 @@
     "version": "0.4.4",
     "description": "wpa wifi controller",
     "main": "index.js",
+    "types": "index.d.ts",
     "scripts": {
+        "lint": "eslint index.js",
         "test": "mocha"
     },
     "repository": {
@@ -28,6 +30,7 @@
         "conventional-changelog-lint": "^0.3.4",
         "conventional-commits-detector": "^0.1.1",
         "conventional-recommended-bump": "^0.2.1",
+        "eslint": "^4.19.1",
         "grunt": "^1.0.1",
         "grunt-bump": "^0.8.0",
         "grunt-contrib-connect": "^1.0.2",
