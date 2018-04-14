@@ -8,6 +8,8 @@ const unlinkSync = require('fs').unlinkSync;
 const pbkdf2 = require('crypto').pbkdf2;
 const spawnSync = require('child_process').spawnSync;
 
+const noop = () => {};
+
 /*
     WPA_CLI commands
  */
@@ -59,6 +61,8 @@ class WpaCli extends EventEmitter {
         this.socketPath = path.join(ctrlPath, ifName);
         this.client = unix.createSocket('unix_dgram');
         this.clientPath = '/tmp/wpa_ctrl' + Math.random().toString(36).substr(1);
+        this.pendingCmd = { promise: Promise.resolve(), resolve: noop, reject: noop };
+        this.pendingScan = { promise: Promise.resolve(), resolve: noop, reject: noop };
     }
 
     /**
@@ -102,13 +106,13 @@ class WpaCli extends EventEmitter {
         this._onRawMsg(msg);
         switch (true) {
         case 'OK\n' === msg:
-            this.cmdResolve && this.cmdResolve();
+            this.pendingCmd.resolve();
             break;
         case 'FAIL\n' === msg:
-            this.cmdReject && this.cmdReject();
+            this.pendingCmd.reject(new Error('WPA command failed.'));
             break;
         case /^\d+\n$/.test(msg):
-            this.cmdResolve && this.cmdResolve(+msg);
+            this.pendingCmd.resolve(+msg);
             break;
         case /<\d+>/.test(msg):
             this._onCtrlEvent(msg.toString());
@@ -139,13 +143,11 @@ class WpaCli extends EventEmitter {
             this.emit('scanning');
             break;
         case /CTRL-EVENT-SCAN-RESULTS/.test(msg):
-            if (this.scanResolve != null) {
-                this.scanResults().then((scanResults) => {
-                    this.scanResolve && this.scanResolve(scanResults);
-                }).catch((err) => {
-                    this.scanReject && this.scanReject(err);
-                });
-            }
+            this.scanResults().then((scanResults) => {
+                this.pendingScan.resolve(scanResults);
+            }).catch((err) => {
+                this.pendingScan.reject(err);
+            });
             break;
         case /CTRL-EVENT-CONNECTED/.test(msg):
             this._onApConnected(msg);
@@ -183,23 +185,15 @@ class WpaCli extends EventEmitter {
      * @returns {Promise}
      */
     sendCmd(msg) {
-        this.cmdPromise = (this.cmdPromise || Promise.resolve()).then(() => {
+        this.pendingCmd.promise = this.pendingCmd.promise.then(() => {
             return new Promise((resolve, reject) => {
-                this.cmdResolve = resolve;
-                this.cmdReject = reject;
+                this.pendingCmd.resolve = resolve;
+                this.pendingCmd.reject = reject;
                 this.client.send(new Buffer(msg));
             });
         });
 
-        this.cmdPromise.then(() => {
-            this.cmdResolve = null;
-            this.cmdReject = null;
-        }).catch(() => {
-            this.cmdResolve = null;
-            this.cmdReject = null;
-        });
-
-        return this.cmdPromise;
+        return this.pendingCmd.promise;
     }
 
     /**
@@ -207,25 +201,17 @@ class WpaCli extends EventEmitter {
      * @returns {Promise}
      */
     scan() {
-        this.scanPromise = (this.scanPromise || Promise.resolve()).then(() => {
+        this.pendingScan.promise = this.pendingScan.promise.then(() => {
             return new Promise((resolve, reject) => {
-                this.scanResolve = resolve;
-                this.scanReject = reject;
+                this.pendingScan.resolve = resolve;
+                this.pendingScan.reject = reject;
                 this.sendCmd(WPA_CMD.scan).catch((err) => {
                     reject(err);
                 });
             });
         });
 
-        this.scanPromise.then(() => {
-            this.scanResolve = null;
-            this.scanReject = null;
-        }).catch(() => {
-            this.scanResolve = null;
-            this.scanReject = null;
-        });
-
-        return this.scanPromise;
+        return this.pendingScan.promise;
     }
 
     /**
@@ -260,24 +246,22 @@ class WpaCli extends EventEmitter {
             });
         }
 
-        if (this.cmdResolve != null) {
-            msg = msg.split('\n');
-            msg.splice(0, 1);
-            let scanResults = [];
-            msg.forEach(function (line) {
-                if (line.length > 3) {
-                    line = line.split('\t');
-                    scanResults.push({
-                        bssid: line[0].trim(),
-                        freq: +line[1].trim(),
-                        rssi: +line[2].trim(),
-                        flags: parseFlags(line[3].trim()),
-                        ssid: line[4].trim()
-                    });
-                }
-            });
-            this.cmdResolve(scanResults);
-        }
+        msg = msg.split('\n');
+        msg.splice(0, 1);
+        let scanResults = [];
+        msg.forEach(function (line) {
+            if (line.length > 3) {
+                line = line.split('\t');
+                scanResults.push({
+                    bssid: line[0].trim(),
+                    freq: +line[1].trim(),
+                    rssi: +line[2].trim(),
+                    flags: parseFlags(line[3].trim()),
+                    ssid: line[4].trim()
+                });
+            }
+        });
+        this.pendingCmd.resolve(scanResults);
     }
 
     /**
@@ -295,25 +279,23 @@ class WpaCli extends EventEmitter {
      * @param  {string} msg network or devices list
      */
     _onListNetwork(msg) {
-        if (this.cmdResolve != null) {
-            msg = msg.split('\n');
-            msg.splice(0, 1);
-            let networkResults = [];
-            msg.forEach(function (line) {
-                if (line.length > 3) {
-                    line = line.split('\t');
-                    let flags = (line[3] || '[]').trim();
-                    flags = flags.substr(1, flags.length - 1).split('][');
-                    networkResults.push({
-                        networkId: +line[0].trim(),
-                        ssid: line[1].trim(),
-                        bssid: line[2].trim(),
-                        flags: flags
-                    });
-                }
-            });
-            this.cmdResolve(networkResults);
-        }
+        msg = msg.split('\n');
+        msg.splice(0, 1);
+        let networkResults = [];
+        msg.forEach(function (line) {
+            if (line.length > 3) {
+                line = line.split('\t');
+                let flags = (line[3] || '[]').trim();
+                flags = flags.substr(1, flags.length - 1).split('][');
+                networkResults.push({
+                    networkId: +line[0].trim(),
+                    ssid: line[1].trim(),
+                    bssid: line[2].trim(),
+                    flags: flags
+                });
+            }
+        });
+        this.pendingCmd.resolve(networkResults);
     }
 
     /**
@@ -347,17 +329,15 @@ class WpaCli extends EventEmitter {
      * @returns {Promise}
      */
     _onStatus(msg) {
-        if (this.cmdResolve) {
-            msg = msg.split('\n');
-            let status = {};
-            msg.forEach(function (line) {
-                if (line.length > 3) {
-                    line = line.split('=');
-                    status[line[0]] = line[1];
-                }
-            });
-            this.cmdResolve(status);
-        }
+        msg = msg.split('\n');
+        let status = {};
+        msg.forEach(function (line) {
+            if (line.length > 3) {
+                line = line.split('=');
+                status[line[0]] = line[1];
+            }
+        });
+        this.pendingCmd.resolve(status);
     }
 
     /**
@@ -611,21 +591,19 @@ class WpaCli extends EventEmitter {
      * @returns {Promise}
      */
     _onPeerInfo(msg) {
-        if (this.cmdResolve) {
-            msg = msg.split('\n');
-            let deviceAddressExp = /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}/;
-            let status = {};
-            msg.forEach(function (line) {
-                let deviceAddress = deviceAddressExp.exec(line);
-                if (line.length > 3 && !deviceAddress) {
-                    line = line.split('=');
-                    status[line[0]] = line[1];
-                } else if (line.length) {
-                    status.address = deviceAddress[0];
-                }
-            });
-            this.cmdResolve(status);
-        }
+        msg = msg.split('\n');
+        let deviceAddressExp = /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}/;
+        let status = {};
+        msg.forEach(function (line) {
+            let deviceAddress = deviceAddressExp.exec(line);
+            if (line.length > 3 && !deviceAddress) {
+                line = line.split('=');
+                status[line[0]] = line[1];
+            } else if (line.length) {
+                status.address = deviceAddress[0];
+            }
+        });
+        this.pendingCmd.resolve(status);
     }
 
     /**
