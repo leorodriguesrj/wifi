@@ -5,7 +5,7 @@ const EventEmitter = require('events').EventEmitter;
 const exec = require('child_process').exec;
 const path = require('path');
 const unlinkSync = require('fs').unlinkSync;
-const pbkdf2 = require('crypto');
+const pbkdf2 = require('crypto').pbkdf2;
 const spawnSync = require('child_process').spawnSync;
 
 /*
@@ -29,7 +29,10 @@ const WPA_CMD = {
     peerInfo: 'P2P_PEER :peer_addr',
     peerInvite: 'P2P_INVITE',
     removeVirtIface: 'P2P_GROUP_REMOVE :iface',
-    flushPeers: 'P2P_FLUSH'
+    flushPeers: 'P2P_FLUSH',
+    saveConfig: 'SAVE_CONFIG',
+    reconfigure: 'RECONFIGURE',
+    reassociate: 'REASSOCIATE'
 };
 
 /**
@@ -415,6 +418,30 @@ class WpaCli extends EventEmitter {
         return this.sendCmd(WPA_CMD.selectNetwork.replace(/:id/, networkId));
     }
 
+    /**
+     * save the current configuration
+     * 
+     */
+    saveConfig() {
+        return this.sendCmd(WPA_CMD.saveConfig);
+    }
+
+    /**
+     * reload the configuration from disk
+     * 
+     */
+    reconfigure() {
+        return this.sendCmd(WPA_CMD.reconfigure);
+    }
+
+    /**
+     * Force reassociation
+     * 
+     */
+    reassociate() {
+        return this.sendCmd(WPA_CMD.reassociate);
+    }
+    
     /**
      * AP connected event handler
      */

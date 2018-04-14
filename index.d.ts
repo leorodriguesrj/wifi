@@ -22,10 +22,16 @@ declare class WpaCli extends EventEmitter {
     addNetwork(): Promise<number>;
     listNetworks(): Promise<WpaCli.INetworkResult[]>;
     status(): Promise<WpaCli.IStatus>;
-    setSSID(networkId: number, ssid: string): Promise;
-    setPreSharedKey(networkId: number, preSharedKey: string): Promise;
+    setNetworkVariable(networkId: number, variable: string, value: string): Promise;
+    setNetworkSSID(networkId: number, ssid: string): Promise;
+    setNetworkPreSharedKey(networkId: number, preSharedKey: string, ssid: string): Promise;
+    setNetworkIdentity(networkId: number, identity: string): Promise;
+    setNetworkPassword(networkId: number, password: string): Promise;
     enableNetwork(networkId: number): Promise;
     selectNetwork(networkId: number): Promise;
+    saveConfig(): Promise;
+    reconfigure(): Promise;
+    reassociate(): Promise;
     // startDhClient(): void;
     // stopDhClient(): void;
     disconnectAP(): Promise;
