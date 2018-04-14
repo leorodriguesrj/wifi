@@ -175,6 +175,24 @@ class WpaCli extends EventEmitter {
      * @param  {String} msg scan results message
      */
     _onScanResult(msg) {
+        function parseFlags(flags) {
+            const CIPHER = '(?:CCMP-256|GCMP-256|CCMP|GCMP|TKIP|NONE)';
+            const KEY_MGMT = '(?:EAP|PSK|None|SAE|FT/EAP|FT/PSK|FT/SAE|EAP-SHA256|PSK-SHA256|EAP-SUITE-B|EAP-SUITE-B-192|OSEN)';
+            const PROTO = '(WPA|RSN|WPA2|OSEN)';
+            const CRYPTO_FLAG = new RegExp(`\\[${PROTO}-(?:(${KEY_MGMT}(?:\\+${KEY_MGMT})*)-(${CIPHER}(?:\\+${CIPHER})*)(-preauth)?|\\?)\\]`);
+
+            return flags.substr(1, flags.length - 2).split('][').map((e) => {
+                let match = e.match(CRYPTO_FLAG);
+                if (match != null) {
+                    let keyMgmt = (match[2] != null) ? match[2].split('+') : undefined;
+                    let cipher = (match[3] != null) ? match[3].split('+') : undefined;
+                    return { proto: match[1], keyMgmt, cipher, preauth: (match[4] != null) };
+                } else {
+                    return e;
+                }
+            });
+        }
+
         msg = msg.split('\n');
         msg.splice(0, 1);
         let scanResults = [];
@@ -183,8 +201,9 @@ class WpaCli extends EventEmitter {
                 line = line.split('\t');
                 scanResults.push({
                     bssid: line[0].trim(),
-                    freq: line[1].trim(),
-                    rssi: line[2].trim(),
+                    freq: +line[1].trim(),
+                    rssi: +line[2].trim(),
+                    flags: parseFlags(line[3].trim()),
                     ssid: line[4].trim()
                 });
             }
