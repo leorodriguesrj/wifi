@@ -3,45 +3,40 @@ import { EventEmitter } from 'events';
 /**
  * WpaCli to control wpa_supplicant
  * 
- * @emits WpaCli#ready
  * @emits WpaCli#scanning
- * @emits WpaCli#scan_results
- * @emits WpaCli#list_network
- * @emits WpaCli#status
  * @emits WpaCli#ap_connected
  * @emits WpaCli#ap_disconnected
  * @emits WpaCli#peer_found
- * @emits WpaCli#peer_info
  * @emits WpaCli#peer_invitation_received
  * @emits WpaCli#peer_disconnected
  * @emits WpaCli#raw_msg
  */
 declare class WpaCli extends EventEmitter {
-    constructor(ifName: string);
+    constructor(ifName: string, ctrlPath = '/run/wpa_supplicant', clientPath?: string);
 
-    connect(): void;
-    sendCmd(msg: string): void;
-    scan(): void;
-    scanResults(): void;
-    addNetwork(): void;
-    listNetworks(): void;
-    status(): void;
-    setSSID(networkId: string, ssid: string): void;
-    setPassword(networkId: string, password: string): void;
-    enableNetwork(networkId: string): void;
-    selectNetwork(networkId: string): void;
-    startDhClient(): void;
-    stopDhClient(): void;
-    disconnectAP(): void;
-    peerFind(): void;
-    peerList(): void;
-    peerStopFind(): void;
-    peerInfo(peerAddress: string): void;
-    peerConnectPBC(peerAddress: string, isOwner: boolean): void;
-    peerConnectPIN(peerAddress: string, pin: string, isOwner: boolean): void;
-    listInterfaces(callback: (interfaceInfo: WpaCli.IInterfaceInfo) => any): void;
-    removeVitualInterface(iFaceName: string, callback: () => any): void;
-    flushPeers(): void;
+    connect(): Promise;
+    close(): void;
+    sendCmd(msg: string): Promise;
+    scan(): Promise<WpaCli.IScanResult[]>;
+    scanResults(): Promise<WpaCli.IScanResult[]>;
+    addNetwork(): Promise<number>;
+    listNetworks(): Promise<WpaCli.INetworkResult[]>;
+    status(): Promise<WpaCli.IStatus>;
+    setSSID(networkId: number, ssid: string): Promise;
+    setPreSharedKey(networkId: number, preSharedKey: string): Promise;
+    enableNetwork(networkId: number): Promise;
+    selectNetwork(networkId: number): Promise;
+    // startDhClient(): void;
+    // stopDhClient(): void;
+    disconnectAP(): Promise;
+    peerFind(): Promise;
+    peerStopFind(): Promise;
+    peerInfo(peerAddress: string): Promise<WpaCli.IPeerInfo>;
+    peerConnectPBC(peerAddress: string, isOwner: boolean): Promise;
+    peerConnectPIN(peerAddress: string, pin: string, isOwner: boolean): Promise;
+    listInterfaces(): Promise<WpaCli.IInterfaceInfo>;
+    removeVitualInterface(iFaceName: string): Promise;
+    flushPeers(): Promise;
 }
 
 declare namespace WpaCli {
@@ -66,6 +61,24 @@ declare namespace WpaCli {
         rssi: number;
         flags: (string | ICryptoFlag)[];
         ssid: string;
+    }
+
+    export interface INetworkResult {
+        networkId: number;
+        ssid: string;
+        bssid: string;
+        flags: string[];
+    }
+
+    export interface IStatus {
+        [key: string]: string | undefined;
+    }
+
+    export type IPeerInfo = IStatus;
+
+    export interface IPeerAddress {
+        deviceAddress: string;
+        deviceName?: string;
     }
 }
 

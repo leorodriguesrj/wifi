@@ -18,7 +18,7 @@ describe('WpaCli AP connection Tests', function() {
                 clearTimeout(errTimeout); //cancel error timeout
                 wpa.addNetwork();
                 wpa.setSSID(0, 'ssid');
-                wpa.setPassword(0, 'password');
+                wpa.setPreSharedKey(0, 'password');
                 wpa.enableNetwork(0);
                 wpa.selectNetwork(0);
 
