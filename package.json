@@ -1,6 +1,6 @@
 {
-    "name": "wpa-wifi",
-    "version": "0.4.4",
+    "name": "wpa-ctrl",
+    "version": "0.5.0",
     "description": "wpa wifi controller",
     "main": "index.js",
     "types": "index.d.ts",
@@ -10,17 +10,17 @@
     },
     "repository": {
         "type": "git",
-        "url": "https://github.com/Leaftech/wifi.git"
+        "url": "https://github.com/alexmoon/wifi.git"
     },
     "bugs": {
-        "url": "https://github.com/Leaftech/wifi/issues"
+        "url": "https://github.com/alexmoon/wifi/issues"
     },
     "keywords": [
         "wpa",
         "wifi",
         "control"
     ],
-    "author": "Ashish",
+    "author": "Alex Moon",
     "license": "ISC",
     "dependencies": {
         "unix-dgram": "^1.0.0"
