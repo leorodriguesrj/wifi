@@ -12,7 +12,7 @@ import { EventEmitter } from 'events';
  * @emits WpaCli#raw_msg
  */
 declare class WpaCli extends EventEmitter {
-    constructor(ifName: string, ctrlPath = '/run/wpa_supplicant', clientPath?: string);
+    constructor(ifName: string, ctrlPath = '/run/wpa_supplicant');
 
     connect(): Promise;
     close(): void;

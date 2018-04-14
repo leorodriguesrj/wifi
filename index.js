@@ -50,18 +50,20 @@ const WPA_CMD = {
 class WpaCli extends EventEmitter {
     /**
      * constructs WpaCli
-     * @param  {String} ifName interface name eg. wlan0
+     * @param {string} ifName interface name eg. wlan0
+     * @param {string} [ctrlPath='/run/wpa_supplicant'] - The location of the wpa_supplicant control interface.
      */
-    constructor(ifName, ctrlPath = '/run/wpa_supplicant', clientPath = undefined) {
+    constructor(ifName, ctrlPath = '/run/wpa_supplicant') {
         super();
         this.ifName = ifName;
         this.socketPath = path.join(ctrlPath, ifName);
         this.client = unix.createSocket('unix_dgram');
-        this.clientPath = clientPath || ('/tmp/wpa_ctrl' + Math.random().toString(36).substr(1));
+        this.clientPath = '/tmp/wpa_ctrl' + Math.random().toString(36).substr(1);
     }
 
     /**
      * connect to wpa control interface
+     * @returns {Promise}
      */
     connect() {
         return new Promise((resolve, reject) => {
@@ -92,6 +94,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * message event handler
+     * @private
      * @param  {Buffer} msg message recieved from wpa_ctrl
      */
     _onMessage(msg) {
@@ -127,7 +130,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * control event handler
-     * @param  {String} msg control event messages
+     * @private
+     * @param  {string} msg control event messages
      */
     _onCtrlEvent(msg) {
         switch (true) {
@@ -166,7 +170,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * congestion event handler
-     * @param  {String} err congestion error message
+     * @private
+     * @param  {string} err congestion error message
      */
     _onCongestion(err) {
         console.log('congestion', err);
@@ -174,7 +179,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * send request to wpa_cli
-     * @param  {String} msg wpa_cli commands
+     * @param  {string} msg wpa_cli commands
+     * @returns {Promise}
      */
     sendCmd(msg) {
         this.cmdPromise = (this.cmdPromise || Promise.resolve()).then(() => {
@@ -198,6 +204,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * scan for wifi AP
+     * @returns {Promise}
      */
     scan() {
         this.scanPromise = (this.scanPromise || Promise.resolve()).then(() => {
@@ -223,6 +230,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * request for wifi scan results
+     * @returns {Promise}
      */
     scanResults() {
         return this.sendCmd(WPA_CMD.scanResult);
@@ -230,7 +238,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * scan results handler
-     * @param  {String} msg scan results message
+     * @private
+     * @param  {string} msg scan results message
      */
     _onScanResult(msg) {
         function parseFlags(flags) {
@@ -273,7 +282,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * raw message handler from wpa_cli, captures all messages by default for debuging purposes
-     * @param  {String} msg wpa messages
+     * @private
+     * @param  {string} msg wpa messages
      */
     _onRawMsg(msg) {
         this.emit('raw_msg', msg);
@@ -281,7 +291,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * list network handler, list all configured networks or devices
-     * @param  {String} msg network or devices list
+     * @private
+     * @param  {string} msg network or devices list
      */
     _onListNetwork(msg) {
         if (this.cmdResolve != null) {
@@ -307,6 +318,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * add new network
+     * @returns {Promise}
      */
     addNetwork() {
         return this.sendCmd(WPA_CMD.addNetwork);
@@ -314,6 +326,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * request to list networks
+     * @returns {Promise}
      */
     listNetworks() {
         return this.sendCmd(WPA_CMD.listNetwork);
@@ -321,6 +334,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * request for status
+     * @returns {Promise}
      */
     status() {
         return this.sendCmd(WPA_CMD.status);
@@ -328,7 +342,9 @@ class WpaCli extends EventEmitter {
 
     /**
      * status handler, parses status messages and emits status event
-     * @param  {String} msg status message
+     * @private
+     * @param  {string} msg status message
+     * @returns {Promise}
      */
     _onStatus(msg) {
         if (this.cmdResolve) {
@@ -347,9 +363,10 @@ class WpaCli extends EventEmitter {
     /**
      * set network variable
      * 
-     * @param {Number} networkId network id recieved from list networks
-     * @param {String} variable variable to set
-     * @param {String} value value for the variable
+     * @param {number} networkId network id recieved from list networks
+     * @param {string} variable variable to set
+     * @param {string} value value for the variable
+     * @returns {Promise}
      */
     setNetworkVariable(networkId, variable, value) {
         return this.sendCmd(WPA_CMD.setNetwork.replace(':id', networkId).replace(':key', variable).replace(':value', value));
@@ -357,8 +374,9 @@ class WpaCli extends EventEmitter {
 
     /**
      * set network ssid
-     * @param {Number} networkId network id recieved from list networks
-     * @param {String} ssid ssid to network
+     * @param {number} networkId network id recieved from list networks
+     * @param {string} ssid ssid of the network
+     * @returns {Promise}
      */
     setNetworkSSID(networkId, ssid) {
         return this.setNetworkVariable(networkId, 'ssid', `"${ssid}"`);
@@ -366,8 +384,10 @@ class WpaCli extends EventEmitter {
 
     /**
      * set network pre-shared key
-     * @param {Number} networkId networkId network id recieved from list networks
-     * @param {String} preSharedKey  pre-shared key
+     * @param {number} networkId networkId network id recieved from list networks
+     * @param {string} preSharedKey  pre-shared key
+     * @param {string} ssid  ssid of the network
+     * @returns {Promise}
      */
     setNetworkPreSharedKey(networkId, preSharedKey, ssid) {
         return new Promise((resolve, reject) => {
@@ -385,8 +405,9 @@ class WpaCli extends EventEmitter {
 
     /**
      * set network identity
-     * @param {Number} networkId network id recieved from list networks
-     * @param {String} identity identity string for EAP
+     * @param {number} networkId network id recieved from list networks
+     * @param {string} identity identity string for EAP
+     * @returns {Promise}
      */
     setNetworkIdentity(networkId, identity) {
         return this.setNetworkVariable(networkId, 'identity', `"${identity}"`);
@@ -394,8 +415,9 @@ class WpaCli extends EventEmitter {
 
     /**
      * set network password
-     * @param {Number} networkId network id recieved from list networks
-     * @param {String} password password string for EAP
+     * @param {number} networkId network id recieved from list networks
+     * @param {string} password password string for EAP
+     * @returns {Promise}
      */
     setNetworkPassword(networkId, password) {
         let hash = spawnSync('openssl md4', { input: Buffer.from(password, 'utf16le') }).stdout.toString().trim();
@@ -404,7 +426,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * enable configured network
-     * @param  {Number} networkId networkId network id recieved from list networks
+     * @param  {number} networkId networkId network id recieved from list networks
+     * @returns {Promise}
      */
     enableNetwork(networkId) {
         return this.sendCmd(WPA_CMD.enableNetwork.replace(/:id/, networkId));
@@ -412,7 +435,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * select network to connect
-     * @param  {Number} networkId networkId network id recieved from list networks
+     * @param  {number} networkId networkId network id recieved from list networks
+     * @returns {Promise}
      */
     selectNetwork(networkId) {
         return this.sendCmd(WPA_CMD.selectNetwork.replace(/:id/, networkId));
@@ -421,6 +445,7 @@ class WpaCli extends EventEmitter {
     /**
      * save the current configuration
      * 
+     * @returns {Promise}
      */
     saveConfig() {
         return this.sendCmd(WPA_CMD.saveConfig);
@@ -429,6 +454,7 @@ class WpaCli extends EventEmitter {
     /**
      * reload the configuration from disk
      * 
+     * @returns {Promise}
      */
     reconfigure() {
         return this.sendCmd(WPA_CMD.reconfigure);
@@ -437,6 +463,7 @@ class WpaCli extends EventEmitter {
     /**
      * Force reassociation
      * 
+     * @returns {Promise}
      */
     reassociate() {
         return this.sendCmd(WPA_CMD.reassociate);
@@ -444,6 +471,7 @@ class WpaCli extends EventEmitter {
     
     /**
      * AP connected event handler
+     * @private
      */
     _onApConnected() {
         // this.startDhclient();
@@ -452,6 +480,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * AP disconnect event handler
+     * @private
      */
     _onApDisconnected() {
         // this.stopDhclient();
@@ -485,6 +514,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * disconnect from AP
+     * @returns {Promise}
      */
     disconnectAP() {
         return this.sendCmd(WPA_CMD.disconnectAP);
@@ -492,6 +522,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * search for peers
+     * @returns {Promise}
      */
     peerFind() {
         return this.sendCmd(WPA_CMD.peerSearch);
@@ -499,6 +530,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * stop peer search
+     * @returns {Promise}
      */
     peerStopFind() {
         return this.sendCmd(WPA_CMD.peerStopFind);
@@ -506,7 +538,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * fetch Peer Information
-     * @param  {String} peerAddress peer device address
+     * @param  {string} peerAddress peer device address
+     * @returns {Promise}
      */
     peerInfo(peerAddress) {
         let cmd = WPA_CMD.peerInfo.replace(':peer_addr', peerAddress);
@@ -515,8 +548,9 @@ class WpaCli extends EventEmitter {
 
     /**
      * connect to peer with PBC(Push Button Control) authentication mechanism
-     * @param  {String}  peerAddress Mac Address of peer
+     * @param  {string}  peerAddress Mac Address of peer
      * @param  {Boolean} isOwner     Your role, are you group owner? if yes then true else false
+     * @returns {Promise}
      */
     peerConnectPBC(peerAddress, isOwner) {
         let cmd = WPA_CMD.peerConnect.replace(':peer_addr', peerAddress);
@@ -527,9 +561,10 @@ class WpaCli extends EventEmitter {
 
     /**
      * connect to peer with PIN(password) authentication mechanism
-     * @param  {String}  peerAddress Mac Address of peer
-     * @param  {String}  pin         password for authentication
+     * @param  {string}  peerAddress Mac Address of peer
+     * @param  {string}  pin         password for authentication
      * @param  {Boolean} isOwner     Your role, are you group owner? if yes then true else false
+     * @returns {Promise}
      */
     peerConnectPIN(peerAddress, pin, isOwner) {
         let cmd = WPA_CMD.peerConnect.replace(':peer_addr', peerAddress);
@@ -540,7 +575,9 @@ class WpaCli extends EventEmitter {
 
     /**
      * new peer event handler
-     * @param  {String} msg event message
+     * @private
+     * @param  {string} msg event message
+     * @returns {Promise}
      */
     _onNewPeerFound(msg) {
         let deviceAddressExp = /p2p_dev_addr=(\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2})/g;
@@ -555,7 +592,9 @@ class WpaCli extends EventEmitter {
 
     /**
      * peer disconnection event handler
-     * @param  {String} msg event message
+     * @private
+     * @param  {string} msg event message
+     * @returns {Promise}
      */
     _onPeerDisconnect(msg) {
         let deviceAddressExp = /p2p_dev_addr=(\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2})/g;
@@ -567,7 +606,9 @@ class WpaCli extends EventEmitter {
 
     /**
      * peer info event handler
-     * @param  {String} msg event message
+     * @private
+     * @param  {string} msg event message
+     * @returns {Promise}
      */
     _onPeerInfo(msg) {
         if (this.cmdResolve) {
@@ -589,6 +630,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * list network interfaces on system
+     * @returns {Promise}
      */
     listInterfaces() {
         return new Promise((resolve, reject) => {
@@ -632,7 +674,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * peer connected handler
-     *
+     * @private
      */
     _onPeerConnected(msg) {
         let peerInterface = /P2P-GROUP-STARTED (p2p-p2p\d{1,2}-\d{1,2})/.exec(msg)[1];
@@ -641,7 +683,8 @@ class WpaCli extends EventEmitter {
 
     /**
      * handle peer invitation event
-     * @param  {String} msg message 
+     * @private
+     * @param  {string} msg message 
      */
     _onPeerInvitation(msg) {
         let peerAddress = /bssid=(\w{1,2}:\w{1,2}:\w{1,2}:\w{1,2}:\w{1,2}:\w{1,2})/.exec(msg)[1];
@@ -650,8 +693,9 @@ class WpaCli extends EventEmitter {
 
     /**
      * Remove virtual interface eg: p2p-p2p0-1
-     * @param  {String}   iFaceName interface name
+     * @param  {string}   iFaceName interface name
      * @param  {Function} callback  callback function
+     * @returns {Promise}
      */
     removeVitualInterface(iFaceName) {
         let cmd = WPA_CMD.removeVirtIface.replace(':iface', iFaceName);
@@ -660,6 +704,7 @@ class WpaCli extends EventEmitter {
 
     /**
      * Flush peer data
+     * @returns {Promise}
      */
     flushPeers() {
         let cmd = WPA_CMD.flushPeers;
