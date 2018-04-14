@@ -59,8 +59,6 @@ class WpaCli extends EventEmitter {
         super();
         this.ifName = ifName;
         this.socketPath = path.join(ctrlPath, ifName);
-        this.client = unix.createSocket('unix_dgram');
-        this.clientPath = '/tmp/wpa_ctrl' + Math.random().toString(36).substr(1);
         this.pendingCmd = { promise: Promise.resolve(), resolve: noop, reject: noop };
         this.pendingScan = { promise: Promise.resolve(), resolve: noop, reject: noop };
     }
@@ -70,18 +68,26 @@ class WpaCli extends EventEmitter {
      * @returns {Promise}
      */
     connect() {
+        if (this.client != null) {
+            return Promise.resolve();
+        }
+
+        this.client = unix.createSocket('unix_dgram');
         return new Promise((resolve, reject) => {
             this.client.on('message', this._onMessage.bind(this));
             this.client.on('congestion', this._onCongestion.bind(this));
             this.client.once('connect', () => {
+                this.clientPath = '/tmp/wpa_ctrl' + Math.random().toString(36).substr(1);
                 this.client.bind(this.clientPath);
             });
             this.client.once('listening', () => {
                 this.sendCmd(WPA_CMD.attach);
                 resolve();
             });
-            this.client.once('error', (err) => {
+            this.client.on('error', (err) => {
                 reject(err);
+                this.pendingCmd.reject(err);
+                this.pendingScan.reject(err);
             });
             this.client.connect(this.socketPath);
         });
@@ -93,7 +99,11 @@ class WpaCli extends EventEmitter {
     close() {
         this.client.close();
         this.client = null;
-        unlinkSync(this.clientPath);
+        try {
+            unlinkSync(this.clientPath);
+        } catch (err) {
+            console.log('Error removing client socket.', err);
+        }
     }
 
     /**
@@ -454,7 +464,6 @@ class WpaCli extends EventEmitter {
      * @private
      */
     _onApConnected() {
-        // this.startDhclient();
         this.emit('ap_connected');
     }
 
@@ -463,34 +472,8 @@ class WpaCli extends EventEmitter {
      * @private
      */
     _onApDisconnected() {
-        // this.stopDhclient();
         this.emit('ap_disconnected');
     }
-
-    // /**
-    //  * start dhclient for interface
-    //  */
-    // startDhclient() {
-    //     exec('sudo dhclient ' + this.ifName, (err) => {
-    //         if (err) {
-    //             console.log(err);
-    //         } else {
-    //             this.emit('ap_connected');
-    //         }
-    //     });
-    // }
-
-    // /**
-    //  * stop dhclient for interface
-    //  */
-    // stopDhclient() {
-    //     exec('sudo dhclient -r ' + this.ifName, (err) => {
-    //         if (err) {
-    //             console.log(err);
-    //         }
-    //     });
-    //     this.emit('ap_disconnected');
-    // }
 
     /**
      * disconnect from AP
