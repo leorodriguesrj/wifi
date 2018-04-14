@@ -5,11 +5,11 @@ module.exports = function(grunt) {
     // Project configuration.
     grunt.initConfig({
         pkg: grunt.file.readJSON('package.json'),
-        jshint: {
+        eslint: {
             options: {
-                jshintrc: '.jshintrc'
+                configFile: '.eslintrc.json'
             },
-            all: ['*.js']
+            target: ['*.js', 'test/*.js']
         },
         jsdoc2md: {
             oneOutputFile: {
@@ -23,14 +23,6 @@ module.exports = function(grunt) {
                 options: {
                     destination: 'docs'
                 }
-            }
-        },
-        shell: {
-            lintCommits: {
-                command: 'node_modules/conventional-changelog-lint/distribution/cli.js --edit'
-            },
-            bumpRecommend: {
-                command: 'node_modules/conventional-recommended-bump/cli.js -p angular'
             }
         },
         bump: {
@@ -51,21 +43,12 @@ module.exports = function(grunt) {
                 metadata: '',
                 regExp: false
             }
-        },
-        connect: {
-            server: {
-                options: {
-                    port: 9001,
-                    base: 'docs',
-                    keepalive: true
-                }
-            }
         }
     });
 
 
 
     // Default task(s).
-    grunt.registerTask('default', ['jshint', 'grunt-shell', 'jsdoc', 'connect', 'jsdoc2md']);
+    grunt.registerTask('default', ['eslint', 'jsdoc', 'jsdoc2md']);
 
 };

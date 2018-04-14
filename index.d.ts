@@ -8,6 +8,7 @@ import { EventEmitter } from 'events';
  * @emits WpaCli#ap_disconnected
  * @emits WpaCli#peer_found
  * @emits WpaCli#peer_invitation_received
+ * @emits WpaCli#peer_connected
  * @emits WpaCli#peer_disconnected
  * @emits WpaCli#raw_msg
  */

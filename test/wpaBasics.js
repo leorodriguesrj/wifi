@@ -1,103 +1,74 @@
 'use strict';
 /* eslint-env node, mocha */
 
-const assert = require('chai').assert;
 require('chai').should();
 const WpaCli = require('../');
 
 describe('WpaCli Basic Tests', function () {
     describe('connect to wpa', function () {
-        it('should emit an ready event', function (done) {
+        it('should connect', function (done) {
             let wpa = new WpaCli('wlan0');
 
-            let errTimeout = setTimeout(function () {
-                assert(false, 'Event never fired');
+            wpa.connect().then(function () {
                 done();
-            }, 1000);
-
-            wpa.once('ready', function () {
-                clearTimeout(errTimeout); //cancel error timeout
-                assert(true);
-                done();
+            }).catch(function (err) {
+                done(err);
             });
-            wpa.connect();
-        });
+        }).timeout(5000);
+
         it('should emit an list_network event', function (done) {
             let wpa = new WpaCli('wlan0');
 
-            let errTimeout = setTimeout(function () {
-                assert(false, 'Event never fired');
-                done();
-            }, 2000);
-
-            wpa.once('ready', function () {
-                wpa.listNetworks();
-            });
-            wpa.once('list_network', function (results) {
-                clearTimeout(errTimeout); //cancel error timeout
+            wpa.connect().then(function () {
+                return wpa.listNetworks();
+            }).then(function (results) {
                 results.should.be.a('array');
                 done();
+            }).catch(function (err) {
+                done(err);
             });
-            wpa.connect();
+        }).timeout(2000);
 
-        });
         it('should emit an status event', function (done) {
             let wpa = new WpaCli('wlan0');
 
-            let errTimeout = setTimeout(function () {
-                assert(false, 'Event never fired');
-                done();
-            }, 2000);
-
-            wpa.once('ready', function () {
-                wpa.status();
-            });
-            wpa.once('status', function (result) {
-                clearTimeout(errTimeout); //cancel error timeout
+            wpa.connect().then(function () {
+                return wpa.status();
+            }).then(function (result) {
                 result.should.be.a('object');
                 done();
+            }).catch(function (err) {
+                done(err);
             });
-            wpa.connect();
+        }).timeout(2000);
 
-        });
         it('should emit an scan_results event', function (done) {
             let wpa = new WpaCli('wlan0');
 
-            let errTimeout = setTimeout(function () {
-                assert(false, 'Event never fired');
-                done();
-            }, 5000);
-
-            wpa.once('ready', function () {
-                wpa.scan();
-            });
-            wpa.once('scan_results', function (results) {
-                clearTimeout(errTimeout); //cancel error timeout
+            wpa.connect().then(function () {
+                return wpa.scan();
+            }).then(function (results) {
                 results.should.be.a('array');
                 done();
+            }).catch(function (err) {
+                done(err);
             });
-            wpa.connect();
-
         }).timeout(5000);
+
         it('should emit an raw_msg event', function (done) {
             let wpa = new WpaCli('wlan0');
 
-            let errTimeout = setTimeout(function () {
-                assert(false, 'Event never fired');
-                done();
-            }, 5000);
-
-            wpa.once('ready', function () {
-                wpa.scan();
-            });
             wpa.once('raw_msg', function (msg) {
-                clearTimeout(errTimeout); //cancel error timeout
                 msg.should.be.a('string');
                 done();
             });
-            wpa.connect();
 
-        });
+            wpa.connect().then(function () {
+                return wpa.scan();
+            }).catch(function (err) {
+                done(err);
+            });
+        }).timeout(5000);
 
     });
 });

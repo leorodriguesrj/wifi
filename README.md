@@ -22,32 +22,35 @@ http://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html
 ```javascript
 'use strict';
 
-const WpaCli = require('wpa-wifi');
-var wpa = new WpaCli('wlan0');
-
-wpa.connect().then(function () {
-	console.log('ready');
-	return wpa.listNetworks();
-}).then(function () {
-	wpa.addNetwork();
-}).then(function () {
-	wpa.setSSID(0, 'ssid');
-}).then(function () {
-	wpa.setPassword(0, 'password');
-}).then(function () {
-	wpa.enableNetwork(0);
-}).then(function () {
-	wpa.selectNetwork(0);
-});
+const WpaCli = require('./');
+let wpa = new WpaCli('wlan0');
 
 wpa.on('raw_msg', function(msg) {
-	console.log(msg);
+    console.log(msg);
+});
+
+wpa.connect().then(function () {
+    console.log('ready');
+
+    return wpa.listNetworks();
+}).then(function (networks) {
+    console.log(networks);
+
+    return wpa.scan();
+}).then(function (accessPoints) {
+    console.log(accessPoints);
+
+    wpa.addNetwork();
+    wpa.setSSID(0, 'ssid');
+    wpa.setPassword(0, 'password');
+    wpa.enableNetwork(0);
+    return wpa.selectNetwork(0);
+}).then(function () {
+    wpa.close();
+}).catch(function (err) {
+    console.log(err);
 });
 ```
-<a name="WpaCli"></a>
-
-## WpaCli
-WpaCli to control wpa_supplicant
 
 **Kind**: global class  
 **Emits**: <code>WpaCli#event:scanning</code>, <code>WpaCli#event:ap_connected</code>, <code>WpaCli#event:ap_disconnected</code>, <code>WpaCli#event:peer_found</code>, <code>WpaCli#event:peer_invitation_received</code>, <code>WpaCli#event:peer_connected</code>, <code>WpaCli#event:peer_disconnected</code>, <code>WpaCli#event:raw_msg</code>  

@@ -1,28 +1,30 @@
 'use strict';
+
 const WpaCli = require('./');
-var wpa = new WpaCli('wlan0');
-wpa.on('ready', function() {
+let wpa = new WpaCli('wlan0');
+
+wpa.on('raw_msg', function(msg) {
+    console.log(msg);
+});
+
+wpa.connect().then(function () {
     console.log('ready');
-    wpa.listNetworks();
+
+    return wpa.listNetworks();
+}).then(function (networks) {
+    console.log(networks);
+
+    return wpa.scan();
+}).then(function (accessPoints) {
+    console.log(accessPoints);
+
     wpa.addNetwork();
     wpa.setSSID(0, 'ssid');
     wpa.setPassword(0, 'password');
     wpa.enableNetwork(0);
-    wpa.selectNetwork(0);
-});
-
-wpa.connect();
-
-
-wpa.on('status', function(status) {
-    console.log(status);
-});
-wpa.on('scan_results', function(scanResults) {
-    console.log(scanResults);
-});
-wpa.on('list_network', function(networks) {
-    console.log(networks);
-});
-wpa.on('raw_msg', function(msg) {
-    console.log(msg);
+    return wpa.selectNetwork(0);
+}).then(function () {
+    wpa.close();
+}).catch(function (err) {
+    console.log(err);
 });
