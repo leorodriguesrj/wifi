@@ -4,7 +4,7 @@
 WpaCli to control wpa_supplicant
 
 **Kind**: global class  
-**Emits**: <code>WpaCli#event:scanning</code>, <code>WpaCli#event:ap_connected</code>, <code>WpaCli#event:ap_disconnected</code>, <code>WpaCli#event:peer_found</code>, <code>WpaCli#event:peer_invitation_received</code>, <code>WpaCli#event:peer_connected</code>, <code>WpaCli#event:peer_disconnected</code>, <code>WpaCli#event:raw_msg</code>  
+**Emits**: <code>WpaCli#event:raw_msg</code>, <code>WpaCli#event:response</code>, <code>WpaCli#event:CTRL-REQ</code>, <code>WpaCli#event:P2P-DEVICE-FOUND</code>, <code>WpaCli#event:P2P-DEVICE-LOST</code>, <code>WpaCli#event:P2P-GROUP-STARTED</code>, <code>WpaCli#event:P2P-INVITATION-RECEIVED</code>, <code>WpaCli#event:CTRL-EVENT-CONNECTED</code>, <code>WpaCli#event:CTRL-EVENT-DISCONNECTED</code>  
 
 * [WpaCli](#WpaCli)
     * [new WpaCli(ifName, [ctrlPath])](#new_WpaCli_new)

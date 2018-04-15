@@ -3,14 +3,15 @@ import { EventEmitter } from 'events';
 /**
  * WpaCli to control wpa_supplicant
  * 
- * @emits WpaCli#scanning
- * @emits WpaCli#ap_connected
- * @emits WpaCli#ap_disconnected
- * @emits WpaCli#peer_found
- * @emits WpaCli#peer_invitation_received
- * @emits WpaCli#peer_connected
- * @emits WpaCli#peer_disconnected
  * @emits WpaCli#raw_msg
+ * @emits WpaCli#response
+ * @emits WpaCli#CTRL-REQ
+ * @emits WpaCli#P2P-DEVICE-FOUND
+ * @emits WpaCli#P2P-DEVICE-LOST
+ * @emits WpaCli#P2P-GROUP-STARTED
+ * @emits WpaCli#P2P-INVITATION-RECEIVED
+ * @emits WpaCli#CTRL-EVENT-CONNECTED
+ * @emits WpaCli#CTRL-EVENT-DISCONNECTED
  */
 declare class WpaCli extends EventEmitter {
     constructor(ifName: string, ctrlPath = '/run/wpa_supplicant');
@@ -83,9 +84,28 @@ declare namespace WpaCli {
 
     export type IPeerInfo = IStatus;
 
-    export interface IPeerAddress {
+    export interface IEventParams {
+        level: number;
+        raw?: string;
+    }
+
+    export interface ICtrlReqParams extends IEventParams {
+        field: string;
+        networkId: number;
+        prompt: string;
+    }
+
+    export interface IP2PDeviceParams extends IEventParams {
         deviceAddress: string;
         deviceName?: string;
+    }
+
+    export interface IP2PGroupStartedParams extends IEventParams {
+        peerInterface: string;
+    }
+
+    export interface IP2PInvitationReceivedParams extends IEventParams {
+        peerAddress: string;
     }
 }
 

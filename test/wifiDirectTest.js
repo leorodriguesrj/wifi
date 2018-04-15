@@ -10,8 +10,8 @@ describe('WpaCli P2P Tests', function () {
         let wpa = new WpaCli('p2p0');
         it('should find peers on network', function (done) {
             wpa.connect().then(function () {
-                wpa.once('peer_found', function (peer) {
-                    peer.should.be.a('object');
+                wpa.once('P2P-DEVICE-FOUND', function (params) {
+                    params.deviceAddress.should.be.a('string');
                     done();
                 }).peerFind();
             }).catch(function (err) {
@@ -23,11 +23,11 @@ describe('WpaCli P2P Tests', function () {
         let wpa = new WpaCli('p2p0');
         it('should connect to peer', function (done) {
             wpa.connect().then(function () {
-                wpa.once('peer_found', function (peer) {
-                    wpa.once('peer_connected', function () {
+                wpa.once('P2P-DEVICE-FOUND', function (params) {
+                    wpa.once('P2P-GROUP-STARTED', function () {
                         done();
                     });
-                    wpa.peerConnectPBC(peer.deviceAddress, false);
+                    wpa.peerConnectPBC(params.deviceAddress, false);
                 }).peerFind();
             }).catch(function (err) {
                 done(err);

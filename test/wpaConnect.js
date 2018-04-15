@@ -8,7 +8,7 @@ let wpa = new WpaCli('wlan0');
 describe('WpaCli AP connection Tests', function() {
     describe('connect to wpa', function() {
         it('should emit an connect to AP', function(done) {
-            wpa.once('ap_connected', function() {
+            wpa.once('CTRL-EVENT-CONNECTED', function() {
                 done();
             });
 
@@ -28,7 +28,7 @@ describe('WpaCli AP connection Tests', function() {
 describe('WpaCli AP disconnection Tests', function() {
     describe('connect to wpa', function() {
         it('should emit an disconnect from AP', function(done) {
-            wpa.once('ap_disconnected', function() {
+            wpa.once('CTRL-EVENT-DISCONNECTED', function() {
                 done();
             });
 

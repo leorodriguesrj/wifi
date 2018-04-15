@@ -8,8 +8,6 @@ const unlinkSync = require('fs').unlinkSync;
 const pbkdf2 = require('crypto').pbkdf2;
 const spawnSync = require('child_process').spawnSync;
 
-const noop = () => {};
-
 /*
     WPA_CLI commands
  */
@@ -40,14 +38,15 @@ const WPA_CMD = {
 /**
  * WpaCli to control wpa_supplicant
  * 
- * @emits WpaCli#scanning
- * @emits WpaCli#ap_connected
- * @emits WpaCli#ap_disconnected
- * @emits WpaCli#peer_found
- * @emits WpaCli#peer_invitation_received
- * @emits WpaCli#peer_connected
- * @emits WpaCli#peer_disconnected
  * @emits WpaCli#raw_msg
+ * @emits WpaCli#response
+ * @emits WpaCli#CTRL-REQ
+ * @emits WpaCli#P2P-DEVICE-FOUND
+ * @emits WpaCli#P2P-DEVICE-LOST
+ * @emits WpaCli#P2P-GROUP-STARTED
+ * @emits WpaCli#P2P-INVITATION-RECEIVED
+ * @emits WpaCli#CTRL-EVENT-CONNECTED
+ * @emits WpaCli#CTRL-EVENT-DISCONNECTED
  */
 class WpaCli extends EventEmitter {
     /**
@@ -59,8 +58,8 @@ class WpaCli extends EventEmitter {
         super();
         this.ifName = ifName;
         this.socketPath = path.join(ctrlPath, ifName);
-        this.pendingCmd = { promise: Promise.resolve(), resolve: noop, reject: noop };
-        this.pendingScan = { promise: Promise.resolve(), resolve: noop, reject: noop };
+        this.pendingCmd = Promise.resolve();
+        this.pendingScan = Promise.resolve();
     }
 
     /**
@@ -76,18 +75,15 @@ class WpaCli extends EventEmitter {
         return new Promise((resolve, reject) => {
             this.client.on('message', this._onMessage.bind(this));
             this.client.on('congestion', this._onCongestion.bind(this));
+            this.client.once('error', reject);
             this.client.once('connect', () => {
                 this.clientPath = '/tmp/wpa_ctrl' + Math.random().toString(36).substr(1);
                 this.client.bind(this.clientPath);
             });
             this.client.once('listening', () => {
                 this.sendCmd(WPA_CMD.attach);
+                this.client.removeListener('error', reject);
                 resolve();
-            });
-            this.client.on('error', (err) => {
-                reject(err);
-                this.pendingCmd.reject(err);
-                this.pendingScan.reject(err);
             });
             this.client.connect(this.socketPath);
         });
@@ -112,70 +108,56 @@ class WpaCli extends EventEmitter {
      * @param  {Buffer} msg message recieved from wpa_ctrl
      */
     _onMessage(msg) {
-        msg = msg.toString();
-        this._onRawMsg(msg);
-        switch (true) {
-        case 'OK\n' === msg:
-            this.pendingCmd.resolve();
-            break;
-        case 'FAIL\n' === msg:
-            this.pendingCmd.reject(new Error('WPA command failed.'));
-            break;
-        case /^\d+\n$/.test(msg):
-            this.pendingCmd.resolve(+msg);
-            break;
-        case /<\d+>/.test(msg):
-            this._onCtrlEvent(msg.toString());
-            break;
-        case /bssid \/ frequency \/ signal level \/ flags \/ ssid/.test(msg):
-            this._onScanResult(msg);
-            break;
-        case /network id \/ ssid \/ bssid \/ flags/.test(msg):
-            this._onListNetwork(msg);
-            break;
-        case /p2p_device_address=\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}\naddress=\w/.test(msg):
-            this._onStatus(msg);
-            break;
-        case /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}\npri_dev_type=\w/.test(msg):
-            this._onPeerInfo(msg);
-            break;
+        msg = msg.toString().trim();
+        this.emit('raw_msg', msg);
+        if (/^<\d>/.test(msg)) {
+            let match = /^<\d>CTRL-REQ-/.test(msg) ? msg.match(/^<(\d)>(CTRL-REQ)-(.*)/) : msg.match(/^<(\d)>([-\w]+)\s*(.+)?/);
+            let event = match[2];
+            let params = { level: +match[1], raw: match[3] };
+            
+            this._addParsedEventData(event, params);
+            this.emit(event, params);
+        } else {
+            this.emit('response', msg);
         }
     }
 
     /**
-     * control event handler
+     * add parsed parameters to the event data object
      * @private
-     * @param  {string} msg control event messages
+     * @param {string} event
+     * @param {object} params
      */
-    _onCtrlEvent(msg) {
-        switch (true) {
-        case /CTRL-EVENT-SCAN-STARTED/.test(msg):
-            this.emit('scanning');
+    _addParsedEventData(event, params) {
+        let match;
+        switch (event) {
+        case 'CTRL-REQ':
+            match = params.raw.match(/^(\w+)-(\d+)[-:](.*)/);
+            if (match != null) {
+                params.field = match[1];
+                params.networkId = +match[2];
+                params.prompt = match[3].trim();
+            }
             break;
-        case /CTRL-EVENT-SCAN-RESULTS/.test(msg):
-            this.scanResults().then((scanResults) => {
-                this.pendingScan.resolve(scanResults);
-            }).catch((err) => {
-                this.pendingScan.reject(err);
-            });
+        case 'P2P-DEVICE-FOUND':
+        case 'P2P-DEVICE-LOST':
+            match = params.raw.match(/p2p_dev_addr=([:xdigit:]{2}(?::[:xdigit:]{2}){5}).*(?:name='([^']*))?'/);
+            if (match != null) {
+                params.deviceAddress = match[1];
+                params.deviceName = match[2];
+            }
             break;
-        case /CTRL-EVENT-CONNECTED/.test(msg):
-            this._onApConnected(msg);
+        case 'P2P-GROUP-STARTED':
+            match = params.raw.match(/^([-\w]+)/);
+            if (match != null) {
+                params.peerInterface = match[1];
+            }
             break;
-        case /CTRL-EVENT-DISCONNECTED/.test(msg):
-            this._onApDisconnected(msg);
-            break;
-        case /P2P-DEVICE-FOUND/.test(msg):
-            this._onNewPeerFound(msg);
-            break;
-        case /P2P-DEVICE-LOST/.test(msg):
-            this._onPeerDisconnect(msg);
-            break;
-        case /P2P-GROUP-STARTED/.test(msg):
-            this._onPeerConnected(msg);
-            break;
-        case /P2P-INVITATION-RECEIVED/.test(msg):
-            this._onPeerInvitation(msg);
+        case 'P2P-INVITATION-RECEIVED':
+            match = params.raw.match(/bssid=([:xdigit:]{2}(?::[:xdigit:]{2}){5})/);
+            if (match != null) {
+                params.peerAddress = match[1];
+            }
             break;
         }
     }
@@ -195,15 +177,52 @@ class WpaCli extends EventEmitter {
      * @returns {Promise}
      */
     sendCmd(msg) {
-        this.pendingCmd.promise = this.pendingCmd.promise.then(() => {
+        this.pendingCmd = this.pendingCmd.then(() => {
             return new Promise((resolve, reject) => {
-                this.pendingCmd.resolve = resolve;
-                this.pendingCmd.reject = reject;
+                this.client.once('error', reject);
+                this.once('response', (msg) => {
+                    this.client.removeListener('error', reject);
+                    this._parseResponse(msg, resolve, reject);
+                });
                 this.client.send(new Buffer(msg));
             });
         });
 
-        return this.pendingCmd.promise;
+        return this.pendingCmd;
+    }
+
+    /**
+     * parse response from wpa_cli
+     * @private
+     * @param  {string} msg wpa_cli response
+     */
+    _parseResponse(msg, resolve, reject) {
+        switch (true) {
+        case 'OK' === msg:
+            resolve();
+            break;
+        case 'FAIL' === msg:
+            reject(new Error('WPA command failed.'));
+            break;
+        case /^\d+$/.test(msg):
+            resolve(+msg);
+            break;
+        case /bssid \/ frequency \/ signal level \/ flags \/ ssid/.test(msg):
+            resolve(this._parseScanResult(msg));
+            break;
+        case /network id \/ ssid \/ bssid \/ flags/.test(msg):
+            resolve(this._parseListNetwork(msg));
+            break;
+        case /p2p_device_address=\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}\naddress=\w/.test(msg):
+            resolve(this._parseStatus(msg));
+            break;
+        case /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}\npri_dev_type=\w/.test(msg):
+            resolve(this._parsePeerInfo(msg));
+            break;
+        default:
+            resolve(msg);
+            break;
+        }
     }
 
     /**
@@ -211,17 +230,19 @@ class WpaCli extends EventEmitter {
      * @returns {Promise}
      */
     scan() {
-        this.pendingScan.promise = this.pendingScan.promise.then(() => {
+        this.pendingScan = this.pendingScan.then(() => {
             return new Promise((resolve, reject) => {
-                this.pendingScan.resolve = resolve;
-                this.pendingScan.reject = reject;
-                this.sendCmd(WPA_CMD.scan).catch((err) => {
-                    reject(err);
+                this.once('CTRL-EVENT-SCAN-RESULTS', () => {
+                    this.scanResults().then((scanResults) => {
+                        resolve(scanResults);
+                    }).catch(reject);
                 });
+
+                this.sendCmd(WPA_CMD.scan).catch(reject);
             });
         });
 
-        return this.pendingScan.promise;
+        return this.pendingScan;
     }
 
     /**
@@ -237,7 +258,7 @@ class WpaCli extends EventEmitter {
      * @private
      * @param  {string} msg scan results message
      */
-    _onScanResult(msg) {
+    _parseScanResult(msg) {
         function parseFlags(flags) {
             const CIPHER = '(?:CCMP-256|GCMP-256|CCMP|GCMP|TKIP|NONE)';
             const KEY_MGMT = '(?:EAP|PSK|None|SAE|FT/EAP|FT/PSK|FT/SAE|EAP-SHA256|PSK-SHA256|EAP-SUITE-B|EAP-SUITE-B-192|OSEN)';
@@ -271,16 +292,7 @@ class WpaCli extends EventEmitter {
                 });
             }
         });
-        this.pendingCmd.resolve(scanResults);
-    }
-
-    /**
-     * raw message handler from wpa_cli, captures all messages by default for debuging purposes
-     * @private
-     * @param  {string} msg wpa messages
-     */
-    _onRawMsg(msg) {
-        this.emit('raw_msg', msg);
+        return scanResults;
     }
 
     /**
@@ -288,7 +300,7 @@ class WpaCli extends EventEmitter {
      * @private
      * @param  {string} msg network or devices list
      */
-    _onListNetwork(msg) {
+    _parseListNetwork(msg) {
         msg = msg.split('\n');
         msg.splice(0, 1);
         let networkResults = [];
@@ -305,7 +317,7 @@ class WpaCli extends EventEmitter {
                 });
             }
         });
-        this.pendingCmd.resolve(networkResults);
+        return networkResults;
     }
 
     /**
@@ -336,9 +348,8 @@ class WpaCli extends EventEmitter {
      * status handler, parses status messages and emits status event
      * @private
      * @param  {string} msg status message
-     * @returns {Promise}
      */
-    _onStatus(msg) {
+    _parseStatus(msg) {
         msg = msg.split('\n');
         let status = {};
         msg.forEach(function (line) {
@@ -347,7 +358,7 @@ class WpaCli extends EventEmitter {
                 status[line[0]] = line[1];
             }
         });
-        this.pendingCmd.resolve(status);
+        return status;
     }
 
     /**
@@ -460,22 +471,6 @@ class WpaCli extends EventEmitter {
     }
     
     /**
-     * AP connected event handler
-     * @private
-     */
-    _onApConnected() {
-        this.emit('ap_connected');
-    }
-
-    /**
-     * AP disconnect event handler
-     * @private
-     */
-    _onApDisconnected() {
-        this.emit('ap_disconnected');
-    }
-
-    /**
      * disconnect from AP
      * @returns {Promise}
      */
@@ -537,43 +532,11 @@ class WpaCli extends EventEmitter {
     }
 
     /**
-     * new peer event handler
-     * @private
-     * @param  {string} msg event message
-     * @returns {Promise}
-     */
-    _onNewPeerFound(msg) {
-        let deviceAddressExp = /p2p_dev_addr=(\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2})/g;
-        let deviceNameExp = /name='(.*)'/g;
-        let deviceName = deviceNameExp.exec(msg)[1];
-        let deviceAddress = deviceAddressExp.exec(msg)[1];
-        this.emit('peer_found', {
-            deviceAddress: deviceAddress,
-            deviceName: deviceName
-        });
-    }
-
-    /**
-     * peer disconnection event handler
-     * @private
-     * @param  {string} msg event message
-     * @returns {Promise}
-     */
-    _onPeerDisconnect(msg) {
-        let deviceAddressExp = /p2p_dev_addr=(\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2})/g;
-        let deviceAddress = deviceAddressExp.exec(msg)[1];
-        this.emit('peer_disconnected', {
-            deviceAddress: deviceAddress
-        });
-    }
-
-    /**
      * peer info event handler
      * @private
      * @param  {string} msg event message
-     * @returns {Promise}
      */
-    _onPeerInfo(msg) {
+    _parsePeerInfo(msg) {
         msg = msg.split('\n');
         let deviceAddressExp = /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}/;
         let status = {};
@@ -586,7 +549,7 @@ class WpaCli extends EventEmitter {
                 status.address = deviceAddress[0];
             }
         });
-        this.pendingCmd.resolve(status);
+        return status;
     }
 
     /**
@@ -631,25 +594,6 @@ class WpaCli extends EventEmitter {
                 }
             });
         });
-    }
-
-    /**
-     * peer connected handler
-     * @private
-     */
-    _onPeerConnected(msg) {
-        let peerInterface = /P2P-GROUP-STARTED (p2p-p2p\d{1,2}-\d{1,2})/.exec(msg)[1];
-        this.emit('peer_connected', peerInterface);
-    }
-
-    /**
-     * handle peer invitation event
-     * @private
-     * @param  {string} msg message 
-     */
-    _onPeerInvitation(msg) {
-        let peerAddress = /bssid=(\w{1,2}:\w{1,2}:\w{1,2}:\w{1,2}:\w{1,2}:\w{1,2})/.exec(msg)[1];
-        this.emit('peer_invitation_recieved', peerAddress);
     }
 
     /**
