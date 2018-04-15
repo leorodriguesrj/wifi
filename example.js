@@ -19,8 +19,8 @@ wpa.connect().then(function () {
     console.log(accessPoints);
 
     wpa.addNetwork();
-    wpa.setSSID(0, 'ssid');
-    wpa.setPassword(0, 'password');
+    wpa.setNetworkSSID(0, 'ssid');
+    wpa.setNetworkPreSharedKey(0, 'password');
     wpa.enableNetwork(0);
     return wpa.selectNetwork(0);
 }).then(function () {
