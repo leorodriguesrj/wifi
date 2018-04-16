@@ -1,7 +1,7 @@
 'use strict';
 
-const WpaCli = require('./');
-let wpa = new WpaCli('wlan0');
+const WpaCtrl = require('./');
+let wpa = new WpaCtrl('wlan0');
 
 wpa.on('raw_msg', function(msg) {
     console.log(msg);

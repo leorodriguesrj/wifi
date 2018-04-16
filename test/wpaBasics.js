@@ -2,12 +2,12 @@
 /* eslint-env node, mocha */
 
 require('chai').should();
-const WpaCli = require('../');
+const WpaCtrl = require('../');
 
-describe('WpaCli Basic Tests', function () {
+describe('WpaCtrl Basic Tests', function () {
     describe('connect to wpa', function () {
         it('should connect', function (done) {
-            let wpa = new WpaCli('wlan0');
+            let wpa = new WpaCtrl('wlan0');
 
             wpa.connect().then(function () {
                 done();
@@ -17,7 +17,7 @@ describe('WpaCli Basic Tests', function () {
         }).timeout(5000);
 
         it('should emit an list_network event', function (done) {
-            let wpa = new WpaCli('wlan0');
+            let wpa = new WpaCtrl('wlan0');
 
             wpa.connect().then(function () {
                 return wpa.listNetworks();
@@ -30,7 +30,7 @@ describe('WpaCli Basic Tests', function () {
         }).timeout(2000);
 
         it('should emit an status event', function (done) {
-            let wpa = new WpaCli('wlan0');
+            let wpa = new WpaCtrl('wlan0');
 
             wpa.connect().then(function () {
                 return wpa.status();
@@ -43,7 +43,7 @@ describe('WpaCli Basic Tests', function () {
         }).timeout(2000);
 
         it('should emit an scan_results event', function (done) {
-            let wpa = new WpaCli('wlan0');
+            let wpa = new WpaCtrl('wlan0');
 
             wpa.connect().then(function () {
                 return wpa.scan();
@@ -56,7 +56,7 @@ describe('WpaCli Basic Tests', function () {
         }).timeout(5000);
 
         it('should emit an raw_msg event', function (done) {
-            let wpa = new WpaCli('wlan0');
+            let wpa = new WpaCtrl('wlan0');
 
             wpa.once('raw_msg', function (msg) {
                 msg.should.be.a('string');

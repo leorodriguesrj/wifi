@@ -2,12 +2,12 @@
 /* eslint-env node, mocha */
 
 require('chai').should();
-const WpaCli = require('../');
+const WpaCtrl = require('../');
 
-describe('WpaCli P2P Tests', function () {
+describe('WpaCtrl P2P Tests', function () {
 
     describe('Search for peer', function () {
-        let wpa = new WpaCli('p2p0');
+        let wpa = new WpaCtrl('p2p0');
         it('should find peers on network', function (done) {
             wpa.connect().then(function () {
                 wpa.once('P2P-DEVICE-FOUND', function (params) {
@@ -20,7 +20,7 @@ describe('WpaCli P2P Tests', function () {
         }).timeout(5000);
     });
     describe('connect to peer', function () {
-        let wpa = new WpaCli('p2p0');
+        let wpa = new WpaCtrl('p2p0');
         it('should connect to peer', function (done) {
             wpa.connect().then(function () {
                 wpa.once('P2P-DEVICE-FOUND', function (params) {

@@ -14,7 +14,7 @@ module.exports = function(grunt) {
         jsdoc2md: {
             oneOutputFile: {
                 src: './*.js',
-                dest: 'DOCS.md'
+                dest: 'README.md'
             }
         },
         jsdoc: {

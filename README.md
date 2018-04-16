@@ -1,29 +1,72 @@
-<a name="Wpa-ctrl"></a>
+<a name="WpaCtrl"></a>
 
-## Wpa-ctrl
-WpaCli to control wpa_supplicant
+## WpaCtrl
+WpaCtrl to control wpa_supplicant
 
-**Install:**
+<h3>Install:</h3>
 
 `npm install wpa-ctrl --save`
 
-**Note:**
+<h3>Note:</h3>
 
-This only works on linux, tested on Debian stretch. You need to have
-`wpa_supplicant` installed and run as a user in the `netdev` group.
+This only works on linux, tested on Debian stretch. You need to have `wpa_supplicant` installed and run as a user in the
+`netdev` group.
 
-For More example see test directory for p2p and wifi connection samples. This is a very basic library, it is nessary to write another wrapper over this.
+For more examples, see the test directory for p2p and wifi connection samples. This is a very basic library, it is nessary to
+write another wrapper over this.
 
-**Reference:**
-http://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html
+**Kind**: global class  
+**Emits**: <code>WpaCtrl#event:raw_msg</code>, <code>WpaCtrl#event:response</code>, <code>WpaCtrl#event:CTRL-REQ</code>, <code>WpaCtrl#event:P2P-DEVICE-FOUND</code>, <code>WpaCtrl#event:P2P-DEVICE-LOST</code>, <code>WpaCtrl#event:P2P-GROUP-STARTED</code>, <code>WpaCtrl#event:P2P-INVITATION-RECEIVED</code>, <code>WpaCtrl#event:CTRL-EVENT-CONNECTED</code>, <code>WpaCtrl#event:CTRL-EVENT-DISCONNECTED</code>  
+**See**: [http://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html](http://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html) for full documentation of the commands that can be sent
+and events that can be emitted.  
 
-**Example: Wifi Connection**
+* [WpaCtrl](#WpaCtrl)
+    * [new WpaCtrl(ifName, [ctrlPath])](#new_WpaCtrl_new)
+    * [.connect()](#WpaCtrl+connect) ⇒ <code>Promise</code>
+    * [.close()](#WpaCtrl+close)
+    * [.sendCmd(msg)](#WpaCtrl+sendCmd) ⇒ <code>Promise</code>
+    * [.scan()](#WpaCtrl+scan) ⇒ <code>Promise</code>
+    * [.scanResults()](#WpaCtrl+scanResults) ⇒ <code>Promise</code>
+    * [.addNetwork()](#WpaCtrl+addNetwork) ⇒ <code>Promise</code>
+    * [.listNetworks()](#WpaCtrl+listNetworks) ⇒ <code>Promise</code>
+    * [.status()](#WpaCtrl+status) ⇒ <code>Promise</code>
+    * [.setNetworkVariable(networkId, variable, value)](#WpaCtrl+setNetworkVariable) ⇒ <code>Promise</code>
+    * [.setNetworkSSID(networkId, ssid)](#WpaCtrl+setNetworkSSID) ⇒ <code>Promise</code>
+    * [.setNetworkPreSharedKey(networkId, preSharedKey, ssid)](#WpaCtrl+setNetworkPreSharedKey) ⇒ <code>Promise</code>
+    * [.setNetworkIdentity(networkId, identity)](#WpaCtrl+setNetworkIdentity) ⇒ <code>Promise</code>
+    * [.setNetworkPassword(networkId, password)](#WpaCtrl+setNetworkPassword) ⇒ <code>Promise</code>
+    * [.enableNetwork(networkId)](#WpaCtrl+enableNetwork) ⇒ <code>Promise</code>
+    * [.selectNetwork(networkId)](#WpaCtrl+selectNetwork) ⇒ <code>Promise</code>
+    * [.saveConfig()](#WpaCtrl+saveConfig) ⇒ <code>Promise</code>
+    * [.reconfigure()](#WpaCtrl+reconfigure) ⇒ <code>Promise</code>
+    * [.reassociate()](#WpaCtrl+reassociate) ⇒ <code>Promise</code>
+    * [.disconnectAP()](#WpaCtrl+disconnectAP) ⇒ <code>Promise</code>
+    * [.peerFind()](#WpaCtrl+peerFind) ⇒ <code>Promise</code>
+    * [.peerStopFind()](#WpaCtrl+peerStopFind) ⇒ <code>Promise</code>
+    * [.peerInfo(peerAddress)](#WpaCtrl+peerInfo) ⇒ <code>Promise</code>
+    * [.peerConnectPBC(peerAddress, isOwner)](#WpaCtrl+peerConnectPBC) ⇒ <code>Promise</code>
+    * [.peerConnectPIN(peerAddress, pin, isOwner)](#WpaCtrl+peerConnectPIN) ⇒ <code>Promise</code>
+    * [.listInterfaces()](#WpaCtrl+listInterfaces) ⇒ <code>Promise</code>
+    * [.removeVitualInterface(iFaceName, callback)](#WpaCtrl+removeVitualInterface) ⇒ <code>Promise</code>
+    * [.flushPeers()](#WpaCtrl+flushPeers) ⇒ <code>Promise</code>
 
-```javascript
+<a name="new_WpaCtrl_new"></a>
+
+### new WpaCtrl(ifName, [ctrlPath])
+constructs WpaCtrl
+
+
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| ifName | <code>string</code> |  | interface name eg. wlan0 |
+| [ctrlPath] | <code>string</code> | <code>&quot;&#x27;/run/wpa_supplicant&#x27;&quot;</code> | The location of the wpa_supplicant control interface. |
+
+**Example** *(Scan for SSIDs and connect to an wireless network.)*  
+```js
 'use strict';
 
-const WpaCli = require('./');
-let wpa = new WpaCli('wlan0');
+const WpaCtrl = require('wap-ctrl');
+let wpa = new WpaCtrl('wlan0');
 
 wpa.on('raw_msg', function(msg) {
     console.log(msg);
@@ -51,110 +94,65 @@ wpa.connect().then(function () {
     console.log(err);
 });
 ```
+<a name="WpaCtrl+connect"></a>
 
-**Kind**: global class  
-**Emits**: <code>WpaCli#event:raw_msg</code>, <code>WpaCli#event:response</code>, <code>WpaCli#event:CTRL-REQ</code>, <code>WpaCli#event:P2P-DEVICE-FOUND</code>, <code>WpaCli#event:P2P-DEVICE-LOST</code>, <code>WpaCli#event:P2P-GROUP-STARTED</code>, <code>WpaCli#event:P2P-INVITATION-RECEIVED</code>, <code>WpaCli#event:CTRL-EVENT-CONNECTED</code>, <code>WpaCli#event:CTRL-EVENT-DISCONNECTED</code>  
-
-* [WpaCli](#WpaCli)
-    * [new WpaCli(ifName, [ctrlPath])](#new_WpaCli_new)
-    * [.connect()](#WpaCli+connect) ⇒ <code>Promise</code>
-    * [.close()](#WpaCli+close)
-    * [.sendCmd(msg)](#WpaCli+sendCmd) ⇒ <code>Promise</code>
-    * [.scan()](#WpaCli+scan) ⇒ <code>Promise</code>
-    * [.scanResults()](#WpaCli+scanResults) ⇒ <code>Promise</code>
-    * [.addNetwork()](#WpaCli+addNetwork) ⇒ <code>Promise</code>
-    * [.listNetworks()](#WpaCli+listNetworks) ⇒ <code>Promise</code>
-    * [.status()](#WpaCli+status) ⇒ <code>Promise</code>
-    * [.setNetworkVariable(networkId, variable, value)](#WpaCli+setNetworkVariable) ⇒ <code>Promise</code>
-    * [.setNetworkSSID(networkId, ssid)](#WpaCli+setNetworkSSID) ⇒ <code>Promise</code>
-    * [.setNetworkPreSharedKey(networkId, preSharedKey, ssid)](#WpaCli+setNetworkPreSharedKey) ⇒ <code>Promise</code>
-    * [.setNetworkIdentity(networkId, identity)](#WpaCli+setNetworkIdentity) ⇒ <code>Promise</code>
-    * [.setNetworkPassword(networkId, password)](#WpaCli+setNetworkPassword) ⇒ <code>Promise</code>
-    * [.enableNetwork(networkId)](#WpaCli+enableNetwork) ⇒ <code>Promise</code>
-    * [.selectNetwork(networkId)](#WpaCli+selectNetwork) ⇒ <code>Promise</code>
-    * [.saveConfig()](#WpaCli+saveConfig) ⇒ <code>Promise</code>
-    * [.reconfigure()](#WpaCli+reconfigure) ⇒ <code>Promise</code>
-    * [.reassociate()](#WpaCli+reassociate) ⇒ <code>Promise</code>
-    * [.disconnectAP()](#WpaCli+disconnectAP) ⇒ <code>Promise</code>
-    * [.peerFind()](#WpaCli+peerFind) ⇒ <code>Promise</code>
-    * [.peerStopFind()](#WpaCli+peerStopFind) ⇒ <code>Promise</code>
-    * [.peerInfo(peerAddress)](#WpaCli+peerInfo) ⇒ <code>Promise</code>
-    * [.peerConnectPBC(peerAddress, isOwner)](#WpaCli+peerConnectPBC) ⇒ <code>Promise</code>
-    * [.peerConnectPIN(peerAddress, pin, isOwner)](#WpaCli+peerConnectPIN) ⇒ <code>Promise</code>
-    * [.listInterfaces()](#WpaCli+listInterfaces) ⇒ <code>Promise</code>
-    * [.removeVitualInterface(iFaceName, callback)](#WpaCli+removeVitualInterface) ⇒ <code>Promise</code>
-    * [.flushPeers()](#WpaCli+flushPeers) ⇒ <code>Promise</code>
-
-<a name="new_WpaCli_new"></a>
-
-### new WpaCli(ifName, [ctrlPath])
-constructs WpaCli
-
-
-| Param | Type | Default | Description |
-| --- | --- | --- | --- |
-| ifName | <code>string</code> |  | interface name eg. wlan0 |
-| [ctrlPath] | <code>string</code> | <code>&quot;&#x27;/run/wpa_supplicant&#x27;&quot;</code> | The location of the wpa_supplicant control interface. |
-
-<a name="WpaCli+connect"></a>
-
-### wpaCli.connect() ⇒ <code>Promise</code>
+### wpaCtrl.connect() ⇒ <code>Promise</code>
 connect to wpa control interface
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+close"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+close"></a>
 
-### wpaCli.close()
+### wpaCtrl.close()
 close the wpa control interface
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+sendCmd"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+sendCmd"></a>
 
-### wpaCli.sendCmd(msg) ⇒ <code>Promise</code>
-send request to wpa_cli
+### wpaCtrl.sendCmd(msg) ⇒ <code>Promise</code>
+send request to wpa_supplicant control interface
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| msg | <code>string</code> | wpa_cli commands |
+| msg | <code>string</code> | wpa_supplicant commands |
 
-<a name="WpaCli+scan"></a>
+<a name="WpaCtrl+scan"></a>
 
-### wpaCli.scan() ⇒ <code>Promise</code>
+### wpaCtrl.scan() ⇒ <code>Promise</code>
 scan for wifi AP
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+scanResults"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+scanResults"></a>
 
-### wpaCli.scanResults() ⇒ <code>Promise</code>
+### wpaCtrl.scanResults() ⇒ <code>Promise</code>
 request for wifi scan results
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+addNetwork"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+addNetwork"></a>
 
-### wpaCli.addNetwork() ⇒ <code>Promise</code>
+### wpaCtrl.addNetwork() ⇒ <code>Promise</code>
 add new network
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+listNetworks"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+listNetworks"></a>
 
-### wpaCli.listNetworks() ⇒ <code>Promise</code>
+### wpaCtrl.listNetworks() ⇒ <code>Promise</code>
 request to list networks
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+status"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+status"></a>
 
-### wpaCli.status() ⇒ <code>Promise</code>
+### wpaCtrl.status() ⇒ <code>Promise</code>
 request for status
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+setNetworkVariable"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+setNetworkVariable"></a>
 
-### wpaCli.setNetworkVariable(networkId, variable, value) ⇒ <code>Promise</code>
+### wpaCtrl.setNetworkVariable(networkId, variable, value) ⇒ <code>Promise</code>
 set network variable
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -162,24 +160,24 @@ set network variable
 | variable | <code>string</code> | variable to set |
 | value | <code>string</code> | value for the variable |
 
-<a name="WpaCli+setNetworkSSID"></a>
+<a name="WpaCtrl+setNetworkSSID"></a>
 
-### wpaCli.setNetworkSSID(networkId, ssid) ⇒ <code>Promise</code>
+### wpaCtrl.setNetworkSSID(networkId, ssid) ⇒ <code>Promise</code>
 set network ssid
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | networkId | <code>number</code> | network id recieved from list networks |
 | ssid | <code>string</code> | ssid of the network |
 
-<a name="WpaCli+setNetworkPreSharedKey"></a>
+<a name="WpaCtrl+setNetworkPreSharedKey"></a>
 
-### wpaCli.setNetworkPreSharedKey(networkId, preSharedKey, ssid) ⇒ <code>Promise</code>
+### wpaCtrl.setNetworkPreSharedKey(networkId, preSharedKey, ssid) ⇒ <code>Promise</code>
 set network pre-shared key
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -187,117 +185,117 @@ set network pre-shared key
 | preSharedKey | <code>string</code> | pre-shared key |
 | ssid | <code>string</code> | ssid of the network |
 
-<a name="WpaCli+setNetworkIdentity"></a>
+<a name="WpaCtrl+setNetworkIdentity"></a>
 
-### wpaCli.setNetworkIdentity(networkId, identity) ⇒ <code>Promise</code>
+### wpaCtrl.setNetworkIdentity(networkId, identity) ⇒ <code>Promise</code>
 set network identity
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | networkId | <code>number</code> | network id recieved from list networks |
 | identity | <code>string</code> | identity string for EAP |
 
-<a name="WpaCli+setNetworkPassword"></a>
+<a name="WpaCtrl+setNetworkPassword"></a>
 
-### wpaCli.setNetworkPassword(networkId, password) ⇒ <code>Promise</code>
+### wpaCtrl.setNetworkPassword(networkId, password) ⇒ <code>Promise</code>
 set network password
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | networkId | <code>number</code> | network id recieved from list networks |
 | password | <code>string</code> | password string for EAP |
 
-<a name="WpaCli+enableNetwork"></a>
+<a name="WpaCtrl+enableNetwork"></a>
 
-### wpaCli.enableNetwork(networkId) ⇒ <code>Promise</code>
+### wpaCtrl.enableNetwork(networkId) ⇒ <code>Promise</code>
 enable configured network
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | networkId | <code>number</code> | networkId network id recieved from list networks |
 
-<a name="WpaCli+selectNetwork"></a>
+<a name="WpaCtrl+selectNetwork"></a>
 
-### wpaCli.selectNetwork(networkId) ⇒ <code>Promise</code>
+### wpaCtrl.selectNetwork(networkId) ⇒ <code>Promise</code>
 select network to connect
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | networkId | <code>number</code> | networkId network id recieved from list networks |
 
-<a name="WpaCli+saveConfig"></a>
+<a name="WpaCtrl+saveConfig"></a>
 
-### wpaCli.saveConfig() ⇒ <code>Promise</code>
+### wpaCtrl.saveConfig() ⇒ <code>Promise</code>
 save the current configuration
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+reconfigure"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+reconfigure"></a>
 
-### wpaCli.reconfigure() ⇒ <code>Promise</code>
+### wpaCtrl.reconfigure() ⇒ <code>Promise</code>
 reload the configuration from disk
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+reassociate"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+reassociate"></a>
 
-### wpaCli.reassociate() ⇒ <code>Promise</code>
+### wpaCtrl.reassociate() ⇒ <code>Promise</code>
 Force reassociation
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+disconnectAP"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+disconnectAP"></a>
 
-### wpaCli.disconnectAP() ⇒ <code>Promise</code>
+### wpaCtrl.disconnectAP() ⇒ <code>Promise</code>
 disconnect from AP
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+peerFind"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+peerFind"></a>
 
-### wpaCli.peerFind() ⇒ <code>Promise</code>
+### wpaCtrl.peerFind() ⇒ <code>Promise</code>
 search for peers
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+peerStopFind"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+peerStopFind"></a>
 
-### wpaCli.peerStopFind() ⇒ <code>Promise</code>
+### wpaCtrl.peerStopFind() ⇒ <code>Promise</code>
 stop peer search
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+peerInfo"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+peerInfo"></a>
 
-### wpaCli.peerInfo(peerAddress) ⇒ <code>Promise</code>
+### wpaCtrl.peerInfo(peerAddress) ⇒ <code>Promise</code>
 fetch Peer Information
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | peerAddress | <code>string</code> | peer device address |
 
-<a name="WpaCli+peerConnectPBC"></a>
+<a name="WpaCtrl+peerConnectPBC"></a>
 
-### wpaCli.peerConnectPBC(peerAddress, isOwner) ⇒ <code>Promise</code>
+### wpaCtrl.peerConnectPBC(peerAddress, isOwner) ⇒ <code>Promise</code>
 connect to peer with PBC(Push Button Control) authentication mechanism
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | peerAddress | <code>string</code> | Mac Address of peer |
 | isOwner | <code>Boolean</code> | Your role, are you group owner? if yes then true else false |
 
-<a name="WpaCli+peerConnectPIN"></a>
+<a name="WpaCtrl+peerConnectPIN"></a>
 
-### wpaCli.peerConnectPIN(peerAddress, pin, isOwner) ⇒ <code>Promise</code>
+### wpaCtrl.peerConnectPIN(peerAddress, pin, isOwner) ⇒ <code>Promise</code>
 connect to peer with PIN(password) authentication mechanism
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -305,27 +303,27 @@ connect to peer with PIN(password) authentication mechanism
 | pin | <code>string</code> | password for authentication |
 | isOwner | <code>Boolean</code> | Your role, are you group owner? if yes then true else false |
 
-<a name="WpaCli+listInterfaces"></a>
+<a name="WpaCtrl+listInterfaces"></a>
 
-### wpaCli.listInterfaces() ⇒ <code>Promise</code>
+### wpaCtrl.listInterfaces() ⇒ <code>Promise</code>
 list network interfaces on system
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
-<a name="WpaCli+removeVitualInterface"></a>
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
+<a name="WpaCtrl+removeVitualInterface"></a>
 
-### wpaCli.removeVitualInterface(iFaceName, callback) ⇒ <code>Promise</code>
+### wpaCtrl.removeVitualInterface(iFaceName, callback) ⇒ <code>Promise</code>
 Remove virtual interface eg: p2p-p2p0-1
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | iFaceName | <code>string</code> | interface name |
 | callback | <code>function</code> | callback function |
 
-<a name="WpaCli+flushPeers"></a>
+<a name="WpaCtrl+flushPeers"></a>
 
-### wpaCli.flushPeers() ⇒ <code>Promise</code>
+### wpaCtrl.flushPeers() ⇒ <code>Promise</code>
 Flush peer data
 
-**Kind**: instance method of <code>[WpaCli](#WpaCli)</code>  
+**Kind**: instance method of <code>[WpaCtrl](#WpaCtrl)</code>  

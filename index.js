@@ -5,11 +5,10 @@ const EventEmitter = require('events').EventEmitter;
 const exec = require('child_process').exec;
 const path = require('path');
 const unlinkSync = require('fs').unlinkSync;
-const pbkdf2 = require('crypto').pbkdf2;
-const spawnSync = require('child_process').spawnSync;
+const { pbkdf2, createHash } = require('crypto');
 
 /*
-    WPA_CLI commands
+    wpa_supplicant control interface commands
  */
 const WPA_CMD = {
     listInterfaces: 'ifconfig',
@@ -36,21 +35,67 @@ const WPA_CMD = {
 };
 
 /**
- * WpaCli to control wpa_supplicant
+ * WpaCtrl to control wpa_supplicant
  * 
- * @emits WpaCli#raw_msg
- * @emits WpaCli#response
- * @emits WpaCli#CTRL-REQ
- * @emits WpaCli#P2P-DEVICE-FOUND
- * @emits WpaCli#P2P-DEVICE-LOST
- * @emits WpaCli#P2P-GROUP-STARTED
- * @emits WpaCli#P2P-INVITATION-RECEIVED
- * @emits WpaCli#CTRL-EVENT-CONNECTED
- * @emits WpaCli#CTRL-EVENT-DISCONNECTED
+ * <h3>Install:</h3>
+ * 
+ * `npm install wpa-ctrl --save`
+ * 
+ * <h3>Note:</h3>
+ * 
+ * This only works on linux, tested on Debian stretch. You need to have `wpa_supplicant` installed and run as a user in the
+ * `netdev` group.
+ * 
+ * For more examples, see the test directory for p2p and wifi connection samples. This is a very basic library, it is nessary to
+ * write another wrapper over this.
+ * 
+ * @see {@link http://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html} for full documentation of the commands that can be sent
+ * and events that can be emitted.
+ * @example <caption>Scan for SSIDs and connect to an wireless network.</caption>
+ * 'use strict';
+ * 
+ * const WpaCtrl = require('wap-ctrl');
+ * let wpa = new WpaCtrl('wlan0');
+ * 
+ * wpa.on('raw_msg', function(msg) {
+ *     console.log(msg);
+ * });
+ * 
+ * wpa.connect().then(function () {
+ *     console.log('ready');
+ * 
+ *     return wpa.listNetworks();
+ * }).then(function (networks) {
+ *     console.log(networks);
+ * 
+ *     return wpa.scan();
+ * }).then(function (accessPoints) {
+ *     console.log(accessPoints);
+ * 
+ *     wpa.addNetwork();
+ *     wpa.setNetworkSSID(0, 'ssid');
+ *     wpa.setNetworkPreSharedKey(0, 'password');
+ *     wpa.enableNetwork(0);
+ *     return wpa.selectNetwork(0);
+ * }).then(function () {
+ *     wpa.close();
+ * }).catch(function (err) {
+ *     console.log(err);
+ * });
+ * 
+ * @emits WpaCtrl#raw_msg
+ * @emits WpaCtrl#response
+ * @emits WpaCtrl#CTRL-REQ
+ * @emits WpaCtrl#P2P-DEVICE-FOUND
+ * @emits WpaCtrl#P2P-DEVICE-LOST
+ * @emits WpaCtrl#P2P-GROUP-STARTED
+ * @emits WpaCtrl#P2P-INVITATION-RECEIVED
+ * @emits WpaCtrl#CTRL-EVENT-CONNECTED
+ * @emits WpaCtrl#CTRL-EVENT-DISCONNECTED
  */
-class WpaCli extends EventEmitter {
+class WpaCtrl extends EventEmitter {
     /**
-     * constructs WpaCli
+     * constructs WpaCtrl
      * @param {string} ifName interface name eg. wlan0
      * @param {string} [ctrlPath='/run/wpa_supplicant'] - The location of the wpa_supplicant control interface.
      */
@@ -114,7 +159,7 @@ class WpaCli extends EventEmitter {
             let match = /^<\d>CTRL-REQ-/.test(msg) ? msg.match(/^<(\d)>(CTRL-REQ)-(.*)/) : msg.match(/^<(\d)>([-\w]+)\s*(.+)?/);
             let event = match[2];
             let params = { level: +match[1], raw: match[3] };
-            
+
             this._addParsedEventData(event, params);
             this.emit(event, params);
         } else {
@@ -172,8 +217,8 @@ class WpaCli extends EventEmitter {
     }
 
     /**
-     * send request to wpa_cli
-     * @param  {string} msg wpa_cli commands
+     * send request to wpa_supplicant control interface
+     * @param  {string} msg wpa_supplicant commands
      * @returns {Promise}
      */
     sendCmd(msg) {
@@ -192,9 +237,9 @@ class WpaCli extends EventEmitter {
     }
 
     /**
-     * parse response from wpa_cli
+     * parse response from wpa_supplicant control interface
      * @private
-     * @param  {string} msg wpa_cli response
+     * @param  {string} msg wpa_supplicant response
      */
     _parseResponse(msg, resolve, reject) {
         switch (true) {
@@ -421,8 +466,9 @@ class WpaCli extends EventEmitter {
      * @returns {Promise}
      */
     setNetworkPassword(networkId, password) {
-        let hash = spawnSync('openssl md4', { input: Buffer.from(password, 'utf16le') }).stdout.toString().trim();
-        return this.setNetworkVariable(networkId, 'password', `hash:${hash}`);
+        let hash = createHash('md4');
+        hash.update(Buffer.from(password, 'utf16le'));
+        return this.setNetworkVariable(networkId, 'password', `hash:${hash.digest('hex')}`);
     }
 
     /**
@@ -469,7 +515,7 @@ class WpaCli extends EventEmitter {
     reassociate() {
         return this.sendCmd(WPA_CMD.reassociate);
     }
-    
+
     /**
      * disconnect from AP
      * @returns {Promise}
@@ -617,4 +663,4 @@ class WpaCli extends EventEmitter {
     }
 }
 
-module.exports = WpaCli;
+module.exports = WpaCtrl;
