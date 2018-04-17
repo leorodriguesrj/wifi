@@ -65,13 +65,13 @@ declare class WpaCtrl extends EventEmitter {
      * @param {string} ifName interface name eg. wlan0
      * @param {string} [ctrlPath='/run/wpa_supplicant'] - The location of the wpa_supplicant control interface.
      */
-    constructor(ifName: string, ctrlPath = '/run/wpa_supplicant');
+    constructor(ifName: string, ctrlPath?: string);
 
     /**
      * connect to wpa control interface
      * @returns {Promise}
      */
-    connect(): Promise;
+    connect(): Promise<void>;
 
     /**
      * close the wpa control interface
@@ -83,7 +83,7 @@ declare class WpaCtrl extends EventEmitter {
      * @param  {string} msg wpa_supplicant commands
      * @returns {Promise}
      */
-    sendCmd(msg: string): Promise;
+    sendCmd(msg: string): Promise<void>;
 
     /**
      * scan for wifi AP
@@ -123,7 +123,7 @@ declare class WpaCtrl extends EventEmitter {
      * @param {string} value value for the variable
      * @returns {Promise}
      */
-    setNetworkVariable(networkId: number, variable: string, value: string): Promise;
+    setNetworkVariable(networkId: number, variable: string, value: string): Promise<void>;
 
     /**
      * set network ssid
@@ -131,7 +131,7 @@ declare class WpaCtrl extends EventEmitter {
      * @param {string} ssid ssid of the network
      * @returns {Promise}
      */
-    setNetworkSSID(networkId: number, ssid: string): Promise;
+    setNetworkSSID(networkId: number, ssid: string): Promise<void>;
 
     /**
      * set network pre-shared key
@@ -140,7 +140,7 @@ declare class WpaCtrl extends EventEmitter {
      * @param {string} ssid  ssid of the network (used for calculating the pre-shared key hash)
      * @returns {Promise}
      */
-    setNetworkPreSharedKey(networkId: number, preSharedKey: string, ssid: string): Promise;
+    setNetworkPreSharedKey(networkId: number, preSharedKey: string, ssid: string): Promise<void>;
 
     /**
      * set network identity
@@ -148,7 +148,7 @@ declare class WpaCtrl extends EventEmitter {
      * @param {string} identity identity string for EAP
      * @returns {Promise}
      */
-    setNetworkIdentity(networkId: number, identity: string): Promise;
+    setNetworkIdentity(networkId: number, identity: string): Promise<void>;
 
     /**
      * set network password
@@ -156,60 +156,60 @@ declare class WpaCtrl extends EventEmitter {
      * @param {string} password password string for EAP
      * @returns {Promise}
      */
-    setNetworkPassword(networkId: number, password: string): Promise;
+    setNetworkPassword(networkId: number, password: string): Promise<void>;
 
     /**
      * enable configured network
      * @param  {number} networkId networkId network id recieved from list networks
      * @returns {Promise}
      */
-    enableNetwork(networkId: number): Promise;
+    enableNetwork(networkId: number): Promise<void>;
 
     /**
      * select network to connect
      * @param  {number} networkId networkId network id recieved from list networks
      * @returns {Promise}
      */
-    selectNetwork(networkId: number): Promise;
+    selectNetwork(networkId: number): Promise<void>;
 
     /**
      * save the current configuration
      * 
      * @returns {Promise}
      */
-    saveConfig(): Promise;
+    saveConfig(): Promise<void>;
 
     /**
      * reload the configuration from disk
      * 
      * @returns {Promise}
      */
-    reconfigure(): Promise;
+    reconfigure(): Promise<void>;
 
     /**
      * Force reassociation
      * 
      * @returns {Promise}
      */
-    reassociate(): Promise;
+    reassociate(): Promise<void>;
 
     /**
      * disconnect from AP
      * @returns {Promise}
      */
-    disconnectAP(): Promise;
+    disconnectAP(): Promise<void>;
 
     /**
      * search for peers
      * @returns {Promise}
      */
-    peerFind(): Promise;
+    peerFind(): Promise<void>;
 
     /**
      * stop peer search
      * @returns {Promise}
      */
-    peerStopFind(): Promise;
+    peerStopFind(): Promise<void>;
 
     /**
      * fetch Peer Information
@@ -224,7 +224,7 @@ declare class WpaCtrl extends EventEmitter {
      * @param  {Boolean} isOwner     Your role, are you group owner? if yes then true else false
      * @returns {Promise}
      */
-    peerConnectPBC(peerAddress: string, isOwner: boolean): Promise;
+    peerConnectPBC(peerAddress: string, isOwner: boolean): Promise<void>;
 
     /**
      * connect to peer with PIN(password) authentication mechanism
@@ -233,7 +233,7 @@ declare class WpaCtrl extends EventEmitter {
      * @param  {Boolean} isOwner     Your role, are you group owner? if yes then true else false
      * @returns {Promise}
      */
-    peerConnectPIN(peerAddress: string, pin: string, isOwner: boolean): Promise;
+    peerConnectPIN(peerAddress: string, pin: string, isOwner: boolean): Promise<void>;
 
     /**
      * list network interfaces on system
@@ -247,13 +247,13 @@ declare class WpaCtrl extends EventEmitter {
      * @param  {Function} callback  callback function
      * @returns {Promise}
      */
-    removeVitualInterface(iFaceName: string): Promise;
+    removeVitualInterface(iFaceName: string): Promise<void>;
 
     /**
      * Flush peer data
      * @returns {Promise}
      */
-    flushPeers(): Promise;
+    flushPeers(): Promise<void>;
 }
 
 declare namespace WpaCtrl {
