@@ -13,15 +13,20 @@ describe('WpaCtrl AP connection Tests', function() {
             });
 
             wpa.connect().then(function () {
+                let ssid = process.env.SSID || 'ssid';
+                let psk = process.env.PSK || 'password';
+
                 wpa.addNetwork();
-                wpa.setNetworkSSID(0, 'ssid');
-                wpa.setNetworkPreSharedKey(0, 'password');
+                wpa.setNetworkSSID(0, ssid);
+                return wpa.setNetworkPreSharedKey(0, psk, ssid);
+            }).then(function () {
                 wpa.enableNetwork(0);
-                return wpa.selectNetwork(0);
+                wpa.selectNetwork(0);
+                return wpa.reassociate();
             }).catch(function (err) {
                 done(err);
             });
-        }).timeout(1000);
+        }).timeout(5000);
 
     });
 });

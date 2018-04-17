@@ -153,7 +153,7 @@ class WpaCtrl extends EventEmitter {
      * @param  {Buffer} msg message recieved from wpa_ctrl
      */
     _onMessage(msg) {
-        msg = msg.toString().trim();
+        msg = msg.toString().replace(/\n$/, '');
         this.emit('raw_msg', msg);
         if (/^<\d>/.test(msg)) {
             let match = /^<\d>CTRL-REQ-/.test(msg) ? msg.match(/^<(\d)>(CTRL-REQ)-(.*)/) : msg.match(/^<(\d)>([-\w]+)\s*(.+)?/);
