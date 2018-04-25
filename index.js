@@ -258,6 +258,7 @@ class WpaCtrl extends EventEmitter {
         case /network id \/ ssid \/ bssid \/ flags/.test(msg):
             resolve(this._parseListNetwork(msg));
             break;
+        case /^wpa_state=/m.test(msg):
         case /p2p_device_address=\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}\naddress=\w/.test(msg):
             resolve(this._parseStatus(msg));
             break;
