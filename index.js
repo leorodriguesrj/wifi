@@ -354,7 +354,7 @@ class WpaCtrl extends EventEmitter {
             if (line.length > 3) {
                 line = line.split('\t');
                 let flags = (line[3] || '[]').trim();
-                flags = flags.substr(1, flags.length - 1).split('][');
+                flags = flags.substr(1, flags.length - 2).split('][');
                 networkResults.push({
                     networkId: +line[0].trim(),
                     ssid: line[1].trim(),
