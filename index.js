@@ -146,8 +146,8 @@ class WpaCtrl extends events_1.EventEmitter {
      * @private
      * @param  {Buffer} msg message recieved from wpa_ctrl
      */
-    _onMessage(msg) {
-        msg = msg.toString().replace(/\n$/, '');
+    _onMessage(buf) {
+        let msg = buf.toString().replace(/\n$/, '');
         this.emit('raw_msg', msg);
         if (/^<\d>/.test(msg)) {
             let match = /^<\d>CTRL-REQ-/.test(msg) ? msg.match(/^<(\d)>(CTRL-REQ)-(.*)/) : msg.match(/^<(\d)>([-\w]+)\s*(.+)?/);
@@ -306,18 +306,18 @@ class WpaCtrl extends events_1.EventEmitter {
                 }
             });
         }
-        msg = msg.split('\n');
-        msg.splice(0, 1);
+        let lines = msg.split('\n');
+        lines.splice(0, 1);
         let scanResults = [];
-        msg.forEach(function (line) {
+        lines.forEach(function (line) {
             if (line.length > 3) {
-                line = line.split('\t');
+                let fields = line.split('\t');
                 scanResults.push({
-                    bssid: line[0].trim(),
-                    freq: +line[1].trim(),
-                    rssi: +line[2].trim(),
-                    flags: parseFlags(line[3].trim()),
-                    ssid: line[4].trim()
+                    bssid: fields[0].trim(),
+                    freq: +fields[1].trim(),
+                    rssi: +fields[2].trim(),
+                    flags: parseFlags(fields[3].trim()),
+                    ssid: fields[4].trim()
                 });
             }
         });
@@ -329,18 +329,18 @@ class WpaCtrl extends events_1.EventEmitter {
      * @param  {string} msg network or devices list
      */
     _parseListNetwork(msg) {
-        msg = msg.split('\n');
-        msg.splice(0, 1);
+        let lines = msg.split('\n');
+        lines.splice(0, 1);
         let networkResults = [];
-        msg.forEach(function (line) {
+        lines.forEach(function (line) {
             if (line.length > 3) {
-                line = line.split('\t');
-                let flags = (line[3] || '[]').trim();
-                flags = flags.substr(1, flags.length - 2).split('][');
+                let fields = line.split('\t');
+                let flagField = (fields[3] || '[]').trim();
+                let flags = flagField.substr(1, flagField.length - 2).split('][');
                 networkResults.push({
-                    networkId: +line[0].trim(),
-                    ssid: line[1].trim(),
-                    bssid: line[2].trim(),
+                    networkId: +fields[0].trim(),
+                    ssid: fields[1].trim(),
+                    bssid: fields[2].trim(),
                     flags: flags
                 });
             }
@@ -374,12 +374,12 @@ class WpaCtrl extends events_1.EventEmitter {
      * @param  {string} msg status message
      */
     _parseStatus(msg) {
-        msg = msg.split('\n');
+        let lines = msg.split('\n');
         let status = {};
-        msg.forEach(function (line) {
+        lines.forEach(function (line) {
             if (line.length > 3) {
-                line = line.split('=');
-                status[line[0]] = line[1];
+                let fields = line.split('=');
+                status[fields[0]] = fields[1];
             }
         });
         return status;
@@ -394,7 +394,7 @@ class WpaCtrl extends events_1.EventEmitter {
      */
     setNetworkVariable(networkId, variable, value) {
         return this.sendCmd(WPA_CMD.setNetwork
-            .replace(':id', networkId)
+            .replace(':id', networkId.toString())
             .replace(':key', variable)
             .replace(':value', value));
     }
@@ -454,7 +454,7 @@ class WpaCtrl extends events_1.EventEmitter {
      * @returns {Promise}
      */
     enableNetwork(networkId) {
-        return this.sendCmd(WPA_CMD.enableNetwork.replace(/:id/, networkId));
+        return this.sendCmd(WPA_CMD.enableNetwork.replace(/:id/, networkId.toString()));
     }
     /**
      * select network to connect
@@ -462,7 +462,7 @@ class WpaCtrl extends events_1.EventEmitter {
      * @returns {Promise}
      */
     selectNetwork(networkId) {
-        return this.sendCmd(WPA_CMD.selectNetwork.replace(/:id/, networkId));
+        return this.sendCmd(WPA_CMD.selectNetwork.replace(/:id/, networkId.toString()));
     }
     /**
      * save the current configuration
@@ -507,7 +507,7 @@ class WpaCtrl extends events_1.EventEmitter {
      * @returns {Promise}
      */
     peerStopFind() {
-        return this.sendCmd(WPA_CMD.peerStopFind);
+        return this.sendCmd(WPA_CMD.peerStopSearch);
     }
     /**
      * fetch Peer Information
@@ -549,14 +549,14 @@ class WpaCtrl extends events_1.EventEmitter {
      * @param  {string} msg event message
      */
     _parsePeerInfo(msg) {
-        msg = msg.split('\n');
+        let lines = msg.split('\n');
         let deviceAddressExp = /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}/;
         let status = {};
-        msg.forEach(function (line) {
+        lines.forEach(function (line) {
             let deviceAddress = deviceAddressExp.exec(line);
             if (line.length > 3 && !deviceAddress) {
-                line = line.split('=');
-                status[line[0]] = line[1];
+                let fields = line.split('=');
+                status[fields[0]] = fields[1];
             }
             else if (line.length) {
                 status.address = deviceAddress[0];

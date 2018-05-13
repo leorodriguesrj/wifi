@@ -158,8 +158,8 @@ class WpaCtrl extends EventEmitter {
      * @private
      * @param  {Buffer} msg message recieved from wpa_ctrl
      */
-    private _onMessage(msg: Buffer | string) {
-        msg = msg.toString().replace(/\n$/, '');
+    private _onMessage(buf: Buffer) {
+        let msg = buf.toString().replace(/\n$/, '');
         this.emit('raw_msg', msg);
         if (/^<\d>/.test(msg)) {
             let match = /^<\d>CTRL-REQ-/.test(msg) ? msg.match(/^<(\d)>(CTRL-REQ)-(.*)/) : msg.match(/^<(\d)>([-\w]+)\s*(.+)?/);
@@ -310,7 +310,7 @@ class WpaCtrl extends EventEmitter {
      * @private
      * @param  {string} msg scan results message
      */
-    private _parseScanResult(msg: string | string[]) {
+    private _parseScanResult(msg: string) {
         function parseFlags(flags: string) {
             const CIPHER = '(?:CCMP-256|GCMP-256|CCMP|GCMP|TKIP|NONE)';
             const KEY_MGMT = '(?:EAP|PSK|None|SAE|FT/EAP|FT/PSK|FT/SAE|EAP-SHA256|PSK-SHA256|EAP-SUITE-B|EAP-SUITE-B-192|OSEN)';
@@ -330,18 +330,18 @@ class WpaCtrl extends EventEmitter {
             });
         }
 
-        msg = (msg as string).split('\n');
-        msg.splice(0, 1);
+        let lines = msg.split('\n');
+        lines.splice(0, 1);
         let scanResults: WpaCtrl.IScanResult[] = [];
-        msg.forEach(function (line: string | string[]) {
+        lines.forEach(function (line) {
             if (line.length > 3) {
-                line = (line as string).split('\t');
+                let fields = line.split('\t');
                 scanResults.push({
-                    bssid: line[0].trim(),
-                    freq: +line[1].trim(),
-                    rssi: +line[2].trim(),
-                    flags: parseFlags(line[3].trim()),
-                    ssid: line[4].trim()
+                    bssid: fields[0].trim(),
+                    freq: +fields[1].trim(),
+                    rssi: +fields[2].trim(),
+                    flags: parseFlags(fields[3].trim()),
+                    ssid: fields[4].trim()
                 });
             }
         });
@@ -353,19 +353,19 @@ class WpaCtrl extends EventEmitter {
      * @private
      * @param  {string} msg network or devices list
      */
-    private _parseListNetwork(msg: string | string[]) {
-        msg = (msg as string).split('\n');
-        msg.splice(0, 1);
+    private _parseListNetwork(msg: string) {
+        let lines = msg.split('\n');
+        lines.splice(0, 1);
         let networkResults: WpaCtrl.INetworkResult[] = [];
-        msg.forEach(function (line: string | string[]) {
+        lines.forEach(function (line) {
             if (line.length > 3) {
-                line = (line as string).split('\t');
-                let flags: any = (line[3] || '[]').trim();
-                flags = flags.substr(1, flags.length - 2).split('][');
+                let fields = line.split('\t');
+                let flagField = (fields[3] || '[]').trim();
+                let flags = flagField.substr(1, flagField.length - 2).split('][');
                 networkResults.push({
-                    networkId: +line[0].trim(),
-                    ssid: line[1].trim(),
-                    bssid: line[2].trim(),
+                    networkId: +fields[0].trim(),
+                    ssid: fields[1].trim(),
+                    bssid: fields[2].trim(),
                     flags: flags
                 });
             }
@@ -402,13 +402,13 @@ class WpaCtrl extends EventEmitter {
      * @private
      * @param  {string} msg status message
      */
-    private _parseStatus(msg: string | string[]) {
-        msg = (msg as string).split('\n');
+    private _parseStatus(msg: string) {
+        let lines = msg.split('\n');
         let status: WpaCtrl.IStatus = {};
-        msg.forEach(function (line: string | string[]) {
+        lines.forEach(function (line) {
             if (line.length > 3) {
-                line = (line as string).split('=');
-                status[line[0]] = line[1];
+                let fields = line.split('=');
+                status[fields[0]] = fields[1];
             }
         });
         return status;
@@ -424,7 +424,7 @@ class WpaCtrl extends EventEmitter {
      */
     setNetworkVariable(networkId: number, variable: string, value: string): Promise<void> {
         return this.sendCmd(WPA_CMD.setNetwork
-            .replace(':id', networkId)
+            .replace(':id', networkId.toString())
             .replace(':key', variable)
             .replace(':value', value));
     }
@@ -488,7 +488,7 @@ class WpaCtrl extends EventEmitter {
      * @returns {Promise}
      */
     enableNetwork(networkId: number): Promise<void> {
-        return this.sendCmd(WPA_CMD.enableNetwork.replace(/:id/, networkId));
+        return this.sendCmd(WPA_CMD.enableNetwork.replace(/:id/, networkId.toString()));
     }
 
     /**
@@ -497,7 +497,7 @@ class WpaCtrl extends EventEmitter {
      * @returns {Promise}
      */
     selectNetwork(networkId: number): Promise<void> {
-        return this.sendCmd(WPA_CMD.selectNetwork.replace(/:id/, networkId));
+        return this.sendCmd(WPA_CMD.selectNetwork.replace(/:id/, networkId.toString()));
     }
 
     /**
@@ -548,7 +548,7 @@ class WpaCtrl extends EventEmitter {
      * @returns {Promise}
      */
     peerStopFind(): Promise<void> {
-        return this.sendCmd(WPA_CMD.peerStopFind);
+        return this.sendCmd(WPA_CMD.peerStopSearch);
     }
 
     /**
@@ -593,15 +593,15 @@ class WpaCtrl extends EventEmitter {
      * @private
      * @param  {string} msg event message
      */
-    private _parsePeerInfo(msg: string | string[]) {
-        msg = (msg as string).split('\n');
+    private _parsePeerInfo(msg: string) {
+        let lines = msg.split('\n');
         let deviceAddressExp = /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}/;
         let status: WpaCtrl.IStatus = {};
-        msg.forEach(function (line: string | string[]) {
-            let deviceAddress = deviceAddressExp.exec(line as string);
+        lines.forEach(function (line) {
+            let deviceAddress = deviceAddressExp.exec(line);
             if (line.length > 3 && !deviceAddress) {
-                line = (line as string).split('=');
-                status[line[0]] = line[1];
+                let fields = line.split('=');
+                status[fields[0]] = fields[1];
             } else if (line.length) {
                 status.address = deviceAddress[0];
             }
@@ -621,7 +621,7 @@ class WpaCtrl extends EventEmitter {
                 } else {
                     let interfaceInfo: WpaCtrl.IInterfaces = {};
                     let output = stdin.split(/\n/);
-                    let currentInterface: WpaCtrl.IInterfaceInfo | undefined;
+                    let currentInterface: string | undefined;
                     const PATTERNS = {
                         interface: /^\w{1,20}/g,
                         macAddr: /ether (([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2}))/,

@@ -86,7 +86,7 @@ declare class WpaCtrl extends EventEmitter {
      * @private
      * @param  {Buffer} msg message recieved from wpa_ctrl
      */
-    private _onMessage(msg);
+    private _onMessage(buf);
     /**
      * add parsed parameters to the event data object
      * @private
