@@ -217,11 +217,11 @@ class WpaCtrl extends events_1.EventEmitter {
             return new Promise((resolve, reject) => {
                 if (this.client != null) {
                     this.client.once('error', reject);
-                    this.once('response', (msg) => {
+                    this.once('response', (resp) => {
                         if (this.client != null) {
                             this.client.removeListener('error', reject);
                         }
-                        this._parseResponse(msg, resolve, reject);
+                        this._parseResponse(resp, resolve, reject);
                     });
                     this.client.send(new Buffer(msg));
                 }
@@ -316,7 +316,7 @@ class WpaCtrl extends events_1.EventEmitter {
         let lines = msg.split('\n');
         lines.splice(0, 1);
         let scanResults = [];
-        lines.forEach(function (line) {
+        lines.forEach((line) => {
             if (line.length > 3) {
                 let fields = line.split('\t');
                 scanResults.push({
@@ -339,7 +339,7 @@ class WpaCtrl extends events_1.EventEmitter {
         let lines = msg.split('\n');
         lines.splice(0, 1);
         let networkResults = [];
-        lines.forEach(function (line) {
+        lines.forEach((line) => {
             if (line.length > 3) {
                 let fields = line.split('\t');
                 let flagField = (fields[3] || '[]').trim();
@@ -348,7 +348,7 @@ class WpaCtrl extends events_1.EventEmitter {
                     networkId: +fields[0].trim(),
                     ssid: fields[1].trim(),
                     bssid: fields[2].trim(),
-                    flags: flags
+                    flags
                 });
             }
         });
@@ -383,7 +383,7 @@ class WpaCtrl extends events_1.EventEmitter {
     _parseStatus(msg) {
         let lines = msg.split('\n');
         let status = {};
-        lines.forEach(function (line) {
+        lines.forEach((line) => {
             if (line.length > 3) {
                 let fields = line.split('=');
                 status[fields[0]] = fields[1];
@@ -559,7 +559,7 @@ class WpaCtrl extends events_1.EventEmitter {
         let lines = msg.split('\n');
         let deviceAddressExp = /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}/;
         let status = {};
-        lines.forEach(function (line) {
+        lines.forEach((line) => {
             if (line.length > 3) {
                 let deviceAddress = deviceAddressExp.exec(line);
                 if (!deviceAddress) {
@@ -579,7 +579,7 @@ class WpaCtrl extends events_1.EventEmitter {
      */
     listInterfaces() {
         return new Promise((resolve, reject) => {
-            child_process_1.exec(WPA_CMD.listInterfaces, function (err, stdin) {
+            child_process_1.exec(WPA_CMD.listInterfaces, (err, stdin) => {
                 if (err) {
                     reject(err);
                 }
@@ -593,7 +593,7 @@ class WpaCtrl extends events_1.EventEmitter {
                         ipaddress: /inet (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/,
                         bcastAddr: /broadcast (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/
                     };
-                    output.forEach(function (line) {
+                    output.forEach((line) => {
                         let match = line.match(PATTERNS.interface);
                         if (match != null) {
                             currentInterface = interfaceInfo[match[1]] = {};
