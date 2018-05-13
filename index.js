@@ -176,34 +176,34 @@ class WpaCtrl extends EventEmitter {
     _addParsedEventData(event, params) {
         let match;
         switch (event) {
-        case 'CTRL-REQ':
-            match = params.raw.match(/^(\w+)-(\d+)[-:](.*)/);
-            if (match != null) {
-                params.field = match[1];
-                params.networkId = +match[2];
-                params.prompt = match[3].trim();
-            }
-            break;
-        case 'P2P-DEVICE-FOUND':
-        case 'P2P-DEVICE-LOST':
-            match = params.raw.match(/p2p_dev_addr=([:xdigit:]{2}(?::[:xdigit:]{2}){5}).*(?:name='([^']*))?'/);
-            if (match != null) {
-                params.deviceAddress = match[1];
-                params.deviceName = match[2];
-            }
-            break;
-        case 'P2P-GROUP-STARTED':
-            match = params.raw.match(/^([-\w]+)/);
-            if (match != null) {
-                params.peerInterface = match[1];
-            }
-            break;
-        case 'P2P-INVITATION-RECEIVED':
-            match = params.raw.match(/bssid=([:xdigit:]{2}(?::[:xdigit:]{2}){5})/);
-            if (match != null) {
-                params.peerAddress = match[1];
-            }
-            break;
+            case 'CTRL-REQ':
+                match = params.raw.match(/^(\w+)-(\d+)[-:](.*)/);
+                if (match != null) {
+                    params.field = match[1];
+                    params.networkId = +match[2];
+                    params.prompt = match[3].trim();
+                }
+                break;
+            case 'P2P-DEVICE-FOUND':
+            case 'P2P-DEVICE-LOST':
+                match = params.raw.match(/p2p_dev_addr=([:xdigit:]{2}(?::[:xdigit:]{2}){5}).*(?:name='([^']*))?'/);
+                if (match != null) {
+                    params.deviceAddress = match[1];
+                    params.deviceName = match[2];
+                }
+                break;
+            case 'P2P-GROUP-STARTED':
+                match = params.raw.match(/^([-\w]+)/);
+                if (match != null) {
+                    params.peerInterface = match[1];
+                }
+                break;
+            case 'P2P-INVITATION-RECEIVED':
+                match = params.raw.match(/bssid=([:xdigit:]{2}(?::[:xdigit:]{2}){5})/);
+                if (match != null) {
+                    params.peerAddress = match[1];
+                }
+                break;
         }
     }
 
@@ -243,31 +243,31 @@ class WpaCtrl extends EventEmitter {
      */
     _parseResponse(msg, resolve, reject) {
         switch (true) {
-        case 'OK' === msg:
-            resolve();
-            break;
-        case 'FAIL' === msg:
-            reject(new Error('WPA command failed.'));
-            break;
-        case /^\d+$/.test(msg):
-            resolve(+msg);
-            break;
-        case /bssid \/ frequency \/ signal level \/ flags \/ ssid/.test(msg):
-            resolve(this._parseScanResult(msg));
-            break;
-        case /network id \/ ssid \/ bssid \/ flags/.test(msg):
-            resolve(this._parseListNetwork(msg));
-            break;
-        case /^wpa_state=/m.test(msg):
-        case /p2p_device_address=\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}\naddress=\w/.test(msg):
-            resolve(this._parseStatus(msg));
-            break;
-        case /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}\npri_dev_type=\w/.test(msg):
-            resolve(this._parsePeerInfo(msg));
-            break;
-        default:
-            resolve(msg);
-            break;
+            case 'OK' === msg:
+                resolve();
+                break;
+            case 'FAIL' === msg:
+                reject(new Error('WPA command failed.'));
+                break;
+            case /^\d+$/.test(msg):
+                resolve(+msg);
+                break;
+            case /bssid \/ frequency \/ signal level \/ flags \/ ssid/.test(msg):
+                resolve(this._parseScanResult(msg));
+                break;
+            case /network id \/ ssid \/ bssid \/ flags/.test(msg):
+                resolve(this._parseListNetwork(msg));
+                break;
+            case /^wpa_state=/m.test(msg):
+            case /p2p_device_address=\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}\naddress=\w/.test(msg):
+                resolve(this._parseStatus(msg));
+                break;
+            case /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}\npri_dev_type=\w/.test(msg):
+                resolve(this._parsePeerInfo(msg));
+                break;
+            default:
+                resolve(msg);
+                break;
         }
     }
 
@@ -620,21 +620,21 @@ class WpaCtrl extends EventEmitter {
                     };
                     output.forEach(function (line) {
                         switch (true) {
-                        case PATTERNS.interface.test(line):
-                            currentInterface = /(^\w{1,20}-\w{1,20}-\w{1,20}|^\w{1,20})/g.exec(line)[1];
-                            interfaceInfo[currentInterface] = {};
-                            break;
-                        case PATTERNS.macAddr.test(line):
-                            interfaceInfo[currentInterface].hwAddr = PATTERNS.macAddr.exec(line)[1];
-                            break;
-                        case PATTERNS.ipaddress.test(line):
-                            if (PATTERNS.ipaddress.exec(line)) {
-                                interfaceInfo[currentInterface].ipaddress = PATTERNS.ipaddress.exec(line)[1];
-                            }
-                            if (PATTERNS.bcastAddr.exec(line)) {
-                                interfaceInfo[currentInterface].broadcastAddress = PATTERNS.bcastAddr.exec(line)[1];
-                            }
-                            break;
+                            case PATTERNS.interface.test(line):
+                                currentInterface = /(^\w{1,20}-\w{1,20}-\w{1,20}|^\w{1,20})/g.exec(line)[1];
+                                interfaceInfo[currentInterface] = {};
+                                break;
+                            case PATTERNS.macAddr.test(line):
+                                interfaceInfo[currentInterface].hwAddr = PATTERNS.macAddr.exec(line)[1];
+                                break;
+                            case PATTERNS.ipaddress.test(line):
+                                if (PATTERNS.ipaddress.exec(line)) {
+                                    interfaceInfo[currentInterface].ipaddress = PATTERNS.ipaddress.exec(line)[1];
+                                }
+                                if (PATTERNS.bcastAddr.exec(line)) {
+                                    interfaceInfo[currentInterface].broadcastAddress = PATTERNS.bcastAddr.exec(line)[1];
+                                }
+                                break;
                         }
                     });
                     resolve(interfaceInfo);
