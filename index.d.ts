@@ -95,12 +95,6 @@ declare class WpaCtrl extends EventEmitter {
      */
     private _addParsedEventData(event, params);
     /**
-     * congestion event handler
-     * @private
-     * @param  {string} err congestion error message
-     */
-    _onCongestion(err: string): void;
-    /**
      * send request to wpa_supplicant control interface
      * @param  {string} msg wpa_supplicant commands
      * @returns {Promise}

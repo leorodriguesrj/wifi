@@ -124,7 +124,6 @@ class WpaCtrl extends EventEmitter {
         return new Promise<void>((resolve, reject) => {
             this.client = unix.createSocket('unix_dgram');
             this.client.on('message', this._onMessage.bind(this));
-            this.client.on('congestion', this._onCongestion.bind(this));
             this.client.once('error', reject);
             this.client.once('connect', () => {
                 this.clientPath = '/tmp/wpa_ctrl' + Math.random().toString(36).substr(1);
@@ -136,6 +135,9 @@ class WpaCtrl extends EventEmitter {
                 resolve();
             });
             this.client.connect(this.socketPath);
+        }).catch((err) => {
+            this.close();
+            return Promise.reject(err);
         });
     }
 
@@ -216,15 +218,6 @@ class WpaCtrl extends EventEmitter {
                 }
                 break;
         }
-    }
-
-    /**
-     * congestion event handler
-     * @private
-     * @param  {string} err congestion error message
-     */
-    _onCongestion(err: string) {
-        console.log('congestion', err);
     }
 
     /**
