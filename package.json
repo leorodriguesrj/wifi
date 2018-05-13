@@ -25,6 +25,7 @@
         "unix-dgram": "^2.0.2"
     },
     "devDependencies": {
+        "@types/node": "^10.0.8",
         "chai": "^3.5.0",
         "grunt": "^1.0.1",
         "grunt-bump": "^0.8.0",
@@ -32,6 +33,7 @@
         "grunt-jsdoc": "^1.1.0",
         "grunt-jsdoc-to-markdown": "^1.2.1",
         "load-grunt-tasks": "^3.5.0",
-        "mocha": "^2.4.5"
+        "mocha": "^2.4.5",
+        "typescript": "^2.8.3"
     }
 }
