@@ -22,7 +22,7 @@
     "author": "Alex Moon",
     "license": "ISC",
     "dependencies": {
-        "unix-dgram": "^1.0.0"
+        "unix-dgram": "^2.0.2"
     },
     "devDependencies": {
         "chai": "^3.5.0",
