@@ -170,11 +170,10 @@ class WpaCtrl extends EventEmitter {
         this.emit('raw_msg', msg);
         let match = msg.match(/^<(\d)>(CTRL-REQ)-(.*)/) || msg.match(/^<(\d)>([-\w]+)\s*(.+)?/);
         if (match !== null) {
-            let event = match[2];
-            let params = { level: +match[1], raw: match[3] };
+            let params = { event: match[2], level: +match[1], raw: match[3] };
 
-            this._addParsedEventData(event, params);
-            this.emit(event, params);
+            this._addParsedEventData(params);
+            this.emit(params.event, params);
         } else {
             this.emit('response', msg);
         }
@@ -183,12 +182,15 @@ class WpaCtrl extends EventEmitter {
     /**
      * add parsed parameters to the event data object
      * @private
-     * @param {string} event
      * @param {object} params
      */
-    private _addParsedEventData(event: string, params: any) {
+    private _addParsedEventData(params: WpaCtrl.IEventParams) {
+        if (!hasParsedEventParams(params) || params.raw == null) {
+            return;
+        }
+
         let match: RegExpMatchArray | null;
-        switch (event) {
+        switch (params.event) {
             case 'CTRL-REQ':
                 match = params.raw.match(/^(\w+)-(\d+)[-:](.*)/);
                 if (match != null) {
@@ -718,6 +720,7 @@ namespace WpaCtrl {
     export type IPeerInfo = IStatus;
 
     export interface IBaseEventParams {
+        event: string;
         level: number;
         raw?: string;
     }
@@ -747,6 +750,12 @@ namespace WpaCtrl {
 
     export type IEventParams = IBaseEventParams | ICtrlReqEventParams | IP2PDeviceEventParams |
         IP2PInterfaceEventParams | IP2PAddressEventParams;
+}
+
+function hasParsedEventParams(params: WpaCtrl.IEventParams): params is WpaCtrl.ICtrlReqEventParams |
+    WpaCtrl.IP2PDeviceEventParams | WpaCtrl.IP2PInterfaceEventParams | WpaCtrl.IP2PAddressEventParams {
+    return ['CTRL-REQ', 'P2P-DEVICE-FOUND', 'P2P-DEVICE-LOST', 'P2P-GROUP-STARTED', 'P2P-INVITATION-RECEIVED']
+        .indexOf(params.event) !== -1;
 }
 
 export = WpaCtrl;

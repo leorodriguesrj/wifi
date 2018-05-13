@@ -158,10 +158,9 @@ class WpaCtrl extends events_1.EventEmitter {
         this.emit('raw_msg', msg);
         let match = msg.match(/^<(\d)>(CTRL-REQ)-(.*)/) || msg.match(/^<(\d)>([-\w]+)\s*(.+)?/);
         if (match !== null) {
-            let event = match[2];
-            let params = { level: +match[1], raw: match[3] };
-            this._addParsedEventData(event, params);
-            this.emit(event, params);
+            let params = { event: match[2], level: +match[1], raw: match[3] };
+            this._addParsedEventData(params);
+            this.emit(params.event, params);
         }
         else {
             this.emit('response', msg);
@@ -170,12 +169,14 @@ class WpaCtrl extends events_1.EventEmitter {
     /**
      * add parsed parameters to the event data object
      * @private
-     * @param {string} event
      * @param {object} params
      */
-    _addParsedEventData(event, params) {
+    _addParsedEventData(params) {
+        if (!hasParsedEventParams(params) || params.raw == null) {
+            return;
+        }
         let match;
-        switch (event) {
+        switch (params.event) {
             case 'CTRL-REQ':
                 match = params.raw.match(/^(\w+)-(\d+)[-:](.*)/);
                 if (match != null) {
@@ -635,5 +636,9 @@ class WpaCtrl extends events_1.EventEmitter {
         let cmd = WPA_CMD.flushPeers;
         return this.sendCmd(cmd);
     }
+}
+function hasParsedEventParams(params) {
+    return ['CTRL-REQ', 'P2P-DEVICE-FOUND', 'P2P-DEVICE-LOST', 'P2P-GROUP-STARTED', 'P2P-INVITATION-RECEIVED']
+        .indexOf(params.event) !== -1;
 }
 module.exports = WpaCtrl;

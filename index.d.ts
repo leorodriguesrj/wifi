@@ -90,10 +90,9 @@ declare class WpaCtrl extends EventEmitter {
     /**
      * add parsed parameters to the event data object
      * @private
-     * @param {string} event
      * @param {object} params
      */
-    private _addParsedEventData(event, params);
+    private _addParsedEventData(params);
     /**
      * send request to wpa_supplicant control interface
      * @param  {string} msg wpa_supplicant commands
@@ -310,6 +309,7 @@ declare namespace WpaCtrl {
     }
     type IPeerInfo = IStatus;
     interface IBaseEventParams {
+        event: string;
         level: number;
         raw?: string;
     }
