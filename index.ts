@@ -5,9 +5,7 @@ import * as path from 'path';
 import { unlinkSync } from 'fs';
 import { pbkdf2, createHash } from 'crypto';
 
-/*
-    wpa_supplicant control interface commands
- */
+/** @hidden */
 const WPA_CMD = {
     listInterfaces: 'ifconfig',
     attach: 'ATTACH',
@@ -35,61 +33,8 @@ const WPA_CMD = {
 /**
  * WpaCtrl to control wpa_supplicant
  * 
- * <h3>Install:</h3>
- * 
- * `npm install wpa-ctrl --save`
- * 
- * <h3>Note:</h3>
- * 
- * This only works on linux, tested on Debian stretch. You need to have `wpa_supplicant` installed and run as a user in the
- * `netdev` group.
- * 
- * For more examples, see the test directory for p2p and wifi connection samples. This is a very basic library, it is nessary to
- * write another wrapper over this.
- * 
  * @see {@link http://w1.fi/wpa_supplicant/devel/ctrl_iface_page.html} for full documentation of the commands that can be sent
  * and events that can be emitted.
- * @example <caption>Scan for SSIDs and connect to an wireless network.</caption>
- * 'use strict';
- * 
- * const WpaCtrl = require('wap-ctrl');
- * let wpa = new WpaCtrl('wlan0');
- * 
- * wpa.on('raw_msg', function(msg) {
- *     console.log(msg);
- * });
- * 
- * wpa.connect().then(function () {
- *     console.log('ready');
- * 
- *     return wpa.listNetworks();
- * }).then(function (networks) {
- *     console.log(networks);
- * 
- *     return wpa.scan();
- * }).then(function (accessPoints) {
- *     console.log(accessPoints);
- * 
- *     wpa.addNetwork();
- *     wpa.setNetworkSSID(0, 'ssid');
- *     wpa.setNetworkPreSharedKey(0, 'password');
- *     wpa.enableNetwork(0);
- *     return wpa.selectNetwork(0);
- * }).then(function () {
- *     wpa.close();
- * }).catch(function (err) {
- *     console.log(err);
- * });
- * 
- * @emits WpaCtrl#raw_msg
- * @emits WpaCtrl#response
- * @emits WpaCtrl#CTRL-REQ
- * @emits WpaCtrl#P2P-DEVICE-FOUND
- * @emits WpaCtrl#P2P-DEVICE-LOST
- * @emits WpaCtrl#P2P-GROUP-STARTED
- * @emits WpaCtrl#P2P-INVITATION-RECEIVED
- * @emits WpaCtrl#CTRL-EVENT-CONNECTED
- * @emits WpaCtrl#CTRL-EVENT-DISCONNECTED
  */
 class WpaCtrl extends EventEmitter {
     private ifName: string;
@@ -101,8 +46,8 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * constructs WpaCtrl
-     * @param {string} ifName interface name eg. wlan0
-     * @param {string} [ctrlPath='/run/wpa_supplicant'] - The location of the wpa_supplicant control interface.
+     * @param ifName interface name eg. wlan0
+     * @param [ctrlPath='/run/wpa_supplicant'] - The location of the wpa_supplicant control interface.
      */
     constructor(ifName: string, ctrlPath = '/run/wpa_supplicant') {
         super();
@@ -114,7 +59,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * connect to wpa control interface
-     * @returns {Promise}
      */
     connect(): Promise<void> {
         if (this.client != null) {
@@ -162,8 +106,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * message event handler
-     * @private
-     * @param  {Buffer} msg message recieved from wpa_ctrl
+     * @param msg message recieved from wpa_ctrl
      */
     private _onMessage(buf: Buffer) {
         let msg = buf.toString().replace(/\n$/, '');
@@ -181,8 +124,8 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * add parsed parameters to the event data object
-     * @private
-     * @param {object} params
+     * @param event
+     * @param params
      */
     private _addParsedEventData(params: WpaCtrl.IEventParams) {
         if (!hasParsedEventParams(params) || params.raw == null) {
@@ -224,8 +167,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * send request to wpa_supplicant control interface
-     * @param  {string} msg wpa_supplicant commands
-     * @returns {Promise}
+     * @param msg wpa_supplicant commands
      */
     sendCmd(msg: string) {
         this.pendingCmd = this.pendingCmd.then(() => {
@@ -250,8 +192,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * parse response from wpa_supplicant control interface
-     * @private
-     * @param  {string} msg wpa_supplicant response
+     * @param msg wpa_supplicant response
      */
     private _parseResponse(msg: string, resolve: (value?: any) => void, reject: (reason: Error) => void) {
         switch (true) {
@@ -285,7 +226,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * scan for wifi AP
-     * @returns {Promise}
      */
     scan(): Promise<WpaCtrl.IScanResult[]> {
         this.pendingScan = this.pendingScan.then(() => {
@@ -305,7 +245,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * request for wifi scan results
-     * @returns {Promise}
      */
     scanResults(): Promise<WpaCtrl.IScanResult[]> {
         return this.sendCmd(WPA_CMD.scanResult);
@@ -313,8 +252,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * scan results handler
-     * @private
-     * @param  {string} msg scan results message
+     * @param msg scan results message
      */
     private _parseScanResult(msg: string) {
         function parseFlags(flags: string) {
@@ -356,8 +294,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * list network handler, list all configured networks or devices
-     * @private
-     * @param  {string} msg network or devices list
+     * @param msg network or devices list
      */
     private _parseListNetwork(msg: string) {
         let lines = msg.split('\n');
@@ -381,7 +318,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * add new network
-     * @returns {Promise}
      */
     addNetwork(): Promise<number> {
         return this.sendCmd(WPA_CMD.addNetwork);
@@ -389,7 +325,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * request to list networks
-     * @returns {Promise}
      */
     listNetworks(): Promise<WpaCtrl.INetworkResult[]> {
         return this.sendCmd(WPA_CMD.listNetwork);
@@ -397,7 +332,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * request for status
-     * @returns {Promise}
      */
     status(): Promise<WpaCtrl.IStatus> {
         return this.sendCmd(WPA_CMD.status);
@@ -405,8 +339,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * status handler, parses status messages and emits status event
-     * @private
-     * @param  {string} msg status message
+     * @param msg status message
      */
     private _parseStatus(msg: string) {
         let lines = msg.split('\n');
@@ -423,10 +356,9 @@ class WpaCtrl extends EventEmitter {
     /**
      * set network variable
      * 
-     * @param {number} networkId network id recieved from list networks
-     * @param {string} variable variable to set
-     * @param {string} value value for the variable
-     * @returns {Promise}
+     * @param networkId network id recieved from list networks
+     * @param variable variable to set
+     * @param value value for the variable
      */
     setNetworkVariable(networkId: number, variable: string, value: string): Promise<void> {
         return this.sendCmd(WPA_CMD.setNetwork
@@ -437,9 +369,8 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * set network ssid
-     * @param {number} networkId network id recieved from list networks
-     * @param {string} ssid ssid of the network
-     * @returns {Promise}
+     * @param networkId network id recieved from list networks
+     * @param ssid ssid of the network
      */
     setNetworkSSID(networkId: number, ssid: string): Promise<void> {
         return this.setNetworkVariable(networkId, 'ssid', `"${ssid}"`);
@@ -447,10 +378,9 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * set network pre-shared key
-     * @param {number} networkId networkId network id recieved from list networks
-     * @param {string} preSharedKey  pre-shared key
-     * @param {string} ssid  ssid of the network
-     * @returns {Promise}
+     * @param networkId networkId network id recieved from list networks
+     * @param preSharedKey  pre-shared key
+     * @param ssid  ssid of the network
      */
     setNetworkPreSharedKey(networkId: number, preSharedKey: string, ssid: string): Promise<void> {
         return new Promise<string>((resolve, reject) => {
@@ -468,9 +398,8 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * set network identity
-     * @param {number} networkId network id recieved from list networks
-     * @param {string} identity identity string for EAP
-     * @returns {Promise}
+     * @param networkId network id recieved from list networks
+     * @param identity identity string for EAP
      */
     setNetworkIdentity(networkId: number, identity: string): Promise<void> {
         return this.setNetworkVariable(networkId, 'identity', `"${identity}"`);
@@ -478,9 +407,8 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * set network password
-     * @param {number} networkId network id recieved from list networks
-     * @param {string} password password string for EAP
-     * @returns {Promise}
+     * @param networkId network id recieved from list networks
+     * @param password password string for EAP
      */
     setNetworkPassword(networkId: number, password: string): Promise<void> {
         let hash = createHash('md4');
@@ -490,8 +418,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * enable configured network
-     * @param  {number} networkId networkId network id recieved from list networks
-     * @returns {Promise}
+     * @param networkId networkId network id recieved from list networks
      */
     enableNetwork(networkId: number): Promise<void> {
         return this.sendCmd(WPA_CMD.enableNetwork.replace(/:id/, networkId.toString()));
@@ -499,8 +426,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * select network to connect
-     * @param  {number} networkId networkId network id recieved from list networks
-     * @returns {Promise}
+     * @param networkId networkId network id recieved from list networks
      */
     selectNetwork(networkId: number): Promise<void> {
         return this.sendCmd(WPA_CMD.selectNetwork.replace(/:id/, networkId.toString()));
@@ -508,8 +434,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * save the current configuration
-     * 
-     * @returns {Promise}
      */
     saveConfig(): Promise<void> {
         return this.sendCmd(WPA_CMD.saveConfig);
@@ -517,8 +441,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * reload the configuration from disk
-     * 
-     * @returns {Promise}
      */
     reconfigure(): Promise<void> {
         return this.sendCmd(WPA_CMD.reconfigure);
@@ -526,8 +448,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * Force reassociation
-     * 
-     * @returns {Promise}
      */
     reassociate(): Promise<void> {
         return this.sendCmd(WPA_CMD.reassociate);
@@ -535,7 +455,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * disconnect from AP
-     * @returns {Promise}
      */
     disconnectAP(): Promise<void> {
         return this.sendCmd(WPA_CMD.disconnectAP);
@@ -543,7 +462,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * search for peers
-     * @returns {Promise}
      */
     peerFind(): Promise<void> {
         return this.sendCmd(WPA_CMD.peerSearch);
@@ -551,7 +469,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * stop peer search
-     * @returns {Promise}
      */
     peerStopFind(): Promise<void> {
         return this.sendCmd(WPA_CMD.peerStopSearch);
@@ -559,8 +476,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * fetch Peer Information
-     * @param  {string} peerAddress peer device address
-     * @returns {Promise}
+     * @param peerAddress peer device address
      */
     peerInfo(peerAddress: string): Promise<WpaCtrl.IPeerInfo> {
         let cmd = WPA_CMD.peerInfo.replace(':peer_addr', peerAddress);
@@ -569,9 +485,8 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * connect to peer with PBC(Push Button Control) authentication mechanism
-     * @param  {string}  peerAddress Mac Address of peer
-     * @param  {Boolean} isOwner     Your role, are you group owner? if yes then true else false
-     * @returns {Promise}
+     * @param  peerAddress Mac Address of peer
+     * @param isOwner     Your role, are you group owner? if yes then true else false
      */
     peerConnectPBC(peerAddress: string, isOwner: boolean): Promise<void> {
         let cmd = WPA_CMD.peerConnect.replace(':peer_addr', peerAddress);
@@ -582,10 +497,9 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * connect to peer with PIN(password) authentication mechanism
-     * @param  {string}  peerAddress Mac Address of peer
-     * @param  {string}  pin         password for authentication
-     * @param  {Boolean} isOwner     Your role, are you group owner? if yes then true else false
-     * @returns {Promise}
+     * @param  peerAddress Mac Address of peer
+     * @param  pin         password for authentication
+     * @param isOwner     Your role, are you group owner? if yes then true else false
      */
     peerConnectPIN(peerAddress: string, pin: string, isOwner: boolean): Promise<void> {
         let cmd = WPA_CMD.peerConnect.replace(':peer_addr', peerAddress);
@@ -596,8 +510,7 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * peer info event handler
-     * @private
-     * @param  {string} msg event message
+     * @param msg event message
      */
     private _parsePeerInfo(msg: string) {
         let lines = msg.split('\n');
@@ -619,7 +532,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * list network interfaces on system
-     * @returns {Promise}
      */
     listInterfaces(): Promise<WpaCtrl.IInterfaces> {
         return new Promise((resolve, reject) => {
@@ -661,9 +573,8 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * Remove virtual interface eg: p2p-p2p0-1
-     * @param  {string}   iFaceName interface name
-     * @param  {Function} callback  callback function
-     * @returns {Promise}
+     * @param   iFaceName interface name
+     * @param callback  callback function
      */
     removeVitualInterface(iFaceName: string): Promise<void> {
         let cmd = WPA_CMD.removeVirtIface.replace(':iface', iFaceName);
@@ -672,7 +583,6 @@ class WpaCtrl extends EventEmitter {
 
     /**
      * Flush peer data
-     * @returns {Promise}
      */
     flushPeers(): Promise<void> {
         let cmd = WPA_CMD.flushPeers;
@@ -752,6 +662,7 @@ namespace WpaCtrl {
         IP2PInterfaceEventParams | IP2PAddressEventParams;
 }
 
+/** @hidden */
 function hasParsedEventParams(params: WpaCtrl.IEventParams): params is WpaCtrl.ICtrlReqEventParams |
     WpaCtrl.IP2PDeviceEventParams | WpaCtrl.IP2PInterfaceEventParams | WpaCtrl.IP2PAddressEventParams {
     return ['CTRL-REQ', 'P2P-DEVICE-FOUND', 'P2P-DEVICE-LOST', 'P2P-GROUP-STARTED', 'P2P-INVITATION-RECEIVED']

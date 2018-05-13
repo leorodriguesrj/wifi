@@ -9,19 +9,27 @@ module.exports = function(grunt) {
             options: {
                 configFile: '.eslintrc.json'
             },
-            target: ['*.js', 'test/*.js']
+            target: ['test/*.js']
         },
-        jsdoc2md: {
-            oneOutputFile: {
-                src: './*.js',
-                dest: 'README.md'
+        tslint: {
+            options: {
+                configuration: 'tslint.json'
+            },
+            target: ['*.ts', '!*.d.ts']
+        },
+        ts: {
+            default : {
+                tsconfig: './tsconfig.json',
+                src: ['**/*.ts', '!node_modules/**', '!**/*.d.ts', 'modules.d.ts']
             }
         },
-        jsdoc: {
+        typedoc: {
             dist: {
-                src: ['*.js'],
+                src: ['./*.ts'],
                 options: {
-                    destination: 'docs'
+                    excludePrivate: true,
+                    mode: 'file',
+                    out: 'docs'
                 }
             }
         },
@@ -49,6 +57,6 @@ module.exports = function(grunt) {
 
 
     // Default task(s).
-    grunt.registerTask('default', ['eslint', 'jsdoc', 'jsdoc2md']);
+    grunt.registerTask('default', ['eslint', 'tslint', 'ts', 'typedoc']);
 
 };

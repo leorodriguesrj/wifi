@@ -41,3 +41,4 @@ node_modules
 Makefile
 *.sublime-project
 *.sublime-workspace
+.tscache
