@@ -111,8 +111,8 @@ class WpaCtrl extends events_1.EventEmitter {
         if (this.client != null) {
             return Promise.resolve();
         }
-        this.client = unix.createSocket('unix_dgram');
         return new Promise((resolve, reject) => {
+            this.client = unix.createSocket('unix_dgram');
             this.client.on('message', this._onMessage.bind(this));
             this.client.on('congestion', this._onCongestion.bind(this));
             this.client.once('error', reject);
@@ -132,10 +132,15 @@ class WpaCtrl extends events_1.EventEmitter {
      * close the wpa control interface
      */
     close() {
-        this.client.close();
-        this.client = null;
+        if (this.client != null) {
+            this.client.close();
+            this.client = undefined;
+        }
         try {
-            fs_1.unlinkSync(this.clientPath);
+            if (this.clientPath != null) {
+                fs_1.unlinkSync(this.clientPath);
+                this.clientPath = undefined;
+            }
         }
         catch (err) {
             console.log('Error removing client socket.', err);
@@ -149,8 +154,8 @@ class WpaCtrl extends events_1.EventEmitter {
     _onMessage(buf) {
         let msg = buf.toString().replace(/\n$/, '');
         this.emit('raw_msg', msg);
-        if (/^<\d>/.test(msg)) {
-            let match = /^<\d>CTRL-REQ-/.test(msg) ? msg.match(/^<(\d)>(CTRL-REQ)-(.*)/) : msg.match(/^<(\d)>([-\w]+)\s*(.+)?/);
+        let match = msg.match(/^<(\d)>(CTRL-REQ)-(.*)/) || msg.match(/^<(\d)>([-\w]+)\s*(.+)?/);
+        if (match !== null) {
             let event = match[2];
             let params = { level: +match[1], raw: match[3] };
             this._addParsedEventData(event, params);
@@ -215,12 +220,19 @@ class WpaCtrl extends events_1.EventEmitter {
     sendCmd(msg) {
         this.pendingCmd = this.pendingCmd.then(() => {
             return new Promise((resolve, reject) => {
-                this.client.once('error', reject);
-                this.once('response', (msg) => {
-                    this.client.removeListener('error', reject);
-                    this._parseResponse(msg, resolve, reject);
-                });
-                this.client.send(new Buffer(msg));
+                if (this.client != null) {
+                    this.client.once('error', reject);
+                    this.once('response', (msg) => {
+                        if (this.client != null) {
+                            this.client.removeListener('error', reject);
+                        }
+                        this._parseResponse(msg, resolve, reject);
+                    });
+                    this.client.send(new Buffer(msg));
+                }
+                else {
+                    reject(new Error('Not connected.'));
+                }
             });
         });
         return this.pendingCmd;
@@ -553,13 +565,15 @@ class WpaCtrl extends events_1.EventEmitter {
         let deviceAddressExp = /\w{2}:\w{2}:\w{2}:\w{2}:\w{2}:\w{2}/;
         let status = {};
         lines.forEach(function (line) {
-            let deviceAddress = deviceAddressExp.exec(line);
-            if (line.length > 3 && !deviceAddress) {
-                let fields = line.split('=');
-                status[fields[0]] = fields[1];
-            }
-            else if (line.length) {
-                status.address = deviceAddress[0];
+            if (line.length > 3) {
+                let deviceAddress = deviceAddressExp.exec(line);
+                if (!deviceAddress) {
+                    let fields = line.split('=');
+                    status[fields[0]] = fields[1];
+                }
+                else {
+                    status.address = deviceAddress[0];
+                }
             }
         });
         return status;
@@ -579,28 +593,29 @@ class WpaCtrl extends events_1.EventEmitter {
                     let output = stdin.split(/\n/);
                     let currentInterface;
                     const PATTERNS = {
-                        interface: /^\w{1,20}/g,
+                        interface: /(^\w{1,20}(-\w{1,20}-\w{1,20})?)/,
                         macAddr: /ether (([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2}))/,
                         ipaddress: /inet (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/,
                         bcastAddr: /broadcast (\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/
                     };
                     output.forEach(function (line) {
-                        switch (true) {
-                            case PATTERNS.interface.test(line):
-                                currentInterface = /(^\w{1,20}-\w{1,20}-\w{1,20}|^\w{1,20})/g.exec(line)[1];
-                                interfaceInfo[currentInterface] = {};
-                                break;
-                            case PATTERNS.macAddr.test(line):
-                                interfaceInfo[currentInterface].hwAddr = PATTERNS.macAddr.exec(line)[1];
-                                break;
-                            case PATTERNS.ipaddress.test(line):
-                                if (PATTERNS.ipaddress.exec(line)) {
-                                    interfaceInfo[currentInterface].ipaddress = PATTERNS.ipaddress.exec(line)[1];
-                                }
-                                if (PATTERNS.bcastAddr.exec(line)) {
-                                    interfaceInfo[currentInterface].broadcastAddress = PATTERNS.bcastAddr.exec(line)[1];
-                                }
-                                break;
+                        let match = line.match(PATTERNS.interface);
+                        if (match != null) {
+                            currentInterface = interfaceInfo[match[1]] = {};
+                        }
+                        else if (currentInterface != null) {
+                            match = line.match(PATTERNS.macAddr);
+                            if (match != null) {
+                                currentInterface.hwAddr = match[1];
+                            }
+                            match = line.match(PATTERNS.ipaddress);
+                            if (match != null) {
+                                currentInterface.ipaddress = match[1];
+                            }
+                            match = line.match(PATTERNS.bcastAddr);
+                            if (match != null) {
+                                currentInterface.broadcastAddress = match[1];
+                            }
                         }
                     });
                     resolve(interfaceInfo);
