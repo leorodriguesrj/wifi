@@ -22,7 +22,7 @@ $ npm install wpa-ctrl --save
 ```js
 'use strict';
 
-const WpaCtrl = require('wap-ctrl');
+const WpaCtrl = require('wpa-ctrl');
 let wpa = new WpaCtrl('wlan0');
 
 wpa.on('raw_msg', function(msg) {
